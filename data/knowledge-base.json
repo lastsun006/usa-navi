@@ -1,0 +1,224 @@
+{
+  "general": {
+    "tipping": {
+      "title": "チップ（Gratuity）",
+      "basics": "アメリカではチップは文化的な義務です。サービスに対する感謝の意味があります。",
+      "rates": {
+        "restaurant_good": "18〜20%（良いサービス）",
+        "restaurant_standard": "15〜18%（標準）",
+        "taxi_uber": "$1〜$2、またはアプリ上で選択",
+        "hotel_porter": "$1〜$2/バッグ",
+        "hotel_housekeeping": "$2〜$5/泊",
+        "bar": "$1〜$2/杯"
+      },
+      "howToCalculate": "レシートの合計金額（税込）に18〜20%をかけます。例：$50の食事 × 0.18 = $9のチップ",
+      "cardPayment": "カード払いの場合、端末かレシートの「Tip」欄に金額を記入します",
+      "selfService": "カウンター注文（Chipotle、Starbucksなど）はチップ不要のことが多いです。端末で0%を選択でOK"
+    },
+    "safety": {
+      "title": "安全・治安",
+      "emergency": "緊急時は911（救急・警察・消防すべて）",
+      "generalTips": [
+        "財布はズボンの前ポケットに入れる",
+        "スマホは取り出したまま歩かない",
+        "夜間は人通りの多い場所を歩く",
+        "知らない人の車には乗らない（Uberは必ずアプリで確認）"
+      ],
+      "japaneseConsulate": {
+        "location": "ロサンゼルス日本領事館",
+        "phone": "+1-213-617-6700",
+        "address": "350 S. Grand Ave., Suite 1700, Los Angeles, CA 90071",
+        "hours": "月〜金 9:00-12:30, 13:30-16:00"
+      }
+    },
+    "payment": {
+      "title": "支払い・お金",
+      "cashVsCard": "アメリカはカード社会です。VISAかMasterのクレジットカードがあれば基本的にどこでも使えます",
+      "tax": "価格表示は税抜きが多い。実際の支払いは表示価格+6〜10%のTAXがかかります",
+      "currency": "米ドル（USD）。$1 = 約150円前後（2024年時点）",
+      "atm": "空港・銀行・スーパーにATMあり。手数料$3〜$5かかることが多い"
+    }
+  },
+  "usecases": {
+    "lax_transport": {
+      "terminals": {
+        "international": "Tom Bradley International Terminal（TBIT）- ほとんどの国際線",
+        "domestic": "Terminal 1〜8（航空会社によって異なる）"
+      },
+      "transportation": {
+        "uber_lyft": {
+          "recommended": true,
+          "pickup": "国際線はLevel 1のRideshare区域、国内線は各ターミナル前",
+          "estimatedCost": {
+            "downtown": "$35〜$55",
+            "santa_monica": "$40〜$65",
+            "anaheim": "$70〜$100"
+          },
+          "tips": [
+            "乗る前にアプリで料金を確認してから乗車",
+            "運転手の名前と車のナンバープレートをアプリで確認",
+            "渋滞時（平日夕方、週末）は料金が上がるサージプライシングあり"
+          ]
+        },
+        "taxi": {
+          "recommended": false,
+          "reason": "Uberより高く、透明性が低い",
+          "pickup": "各ターミナル外のTaxi乗り場",
+          "estimatedCost": {
+            "downtown": "$50〜$70"
+          }
+        },
+        "flyaway_bus": {
+          "recommended": "荷物が少ない場合のみ",
+          "cost": "$9.75/人",
+          "destination": "Union Station（ダウンタウンのバス・電車ターミナル）",
+          "frequency": "30〜60分に1本"
+        }
+      },
+      "customs_phrases": [
+        {
+          "situation": "入国審査（観光目的）",
+          "english": "The purpose of my visit is tourism.",
+          "pronunciation": "ザ パーパス オブ マイ ビジット イズ ツーリズム",
+          "meaning": "観光目的で来ました"
+        },
+        {
+          "situation": "滞在期間を聞かれたとき",
+          "english": "I'll be staying for [日数] days.",
+          "pronunciation": "アイル ビー ステイング フォー [日数] デイズ",
+          "meaning": "〇〇日間滞在します"
+        },
+        {
+          "situation": "宿泊先を聞かれたとき",
+          "english": "I'm staying at [ホテル名].",
+          "pronunciation": "アイム ステイング アット [ホテル名]",
+          "meaning": "〇〇ホテルに泊まります"
+        },
+        {
+          "situation": "Uberに乗るとき確認",
+          "english": "Are you [運転手の名前]?",
+          "pronunciation": "アー ユー [名前]？",
+          "meaning": "〇〇さんですか？"
+        }
+      ]
+    },
+    "restaurant": {
+      "flow": [
+        "入口でHostess/Hostを待つ（自分で座らない）",
+        "人数を伝える：'Table for [人数], please.'",
+        "席に案内される",
+        "メニューを受け取る（飲み物から聞かれることが多い）",
+        "注文：'I'll have the [料理名], please.'",
+        "食事",
+        "追加注文・困ったことはウェイターに手を挙げて目を合わせる",
+        "お会計：'Can I get the check, please?'",
+        "チップを記入（カードか現金）",
+        "支払い完了"
+      ],
+      "phrases": [
+        {
+          "situation": "入店・席を案内してもらうとき",
+          "english": "Table for [人数], please.",
+          "pronunciation": "テーブル フォー [人数]、プリーズ",
+          "meaning": "[人数]人席をお願いします"
+        },
+        {
+          "situation": "注文するとき（基本）",
+          "english": "I'll have the [料理名], please.",
+          "pronunciation": "アイル ハブ ザ [料理名]、プリーズ",
+          "meaning": "[料理名]をください"
+        },
+        {
+          "situation": "お会計をお願いするとき",
+          "english": "Can I get the check, please?",
+          "pronunciation": "キャナイ ゲット ザ チェック、プリーズ？",
+          "meaning": "お会計をお願いします"
+        },
+        {
+          "situation": "子ども用椅子を頼むとき",
+          "english": "Do you have a high chair?",
+          "pronunciation": "ドゥ ユー ハブ ア ハイ チェア？",
+          "meaning": "ハイチェアはありますか？"
+        },
+        {
+          "situation": "アレルギーを伝えるとき",
+          "english": "I'm allergic to [食材]. Does this contain [食材]?",
+          "pronunciation": "アイム アラジック トゥ [食材]。ダズ ディス コンテイン [食材]？",
+          "meaning": "[食材]アレルギーです。これに[食材]は入っていますか？"
+        }
+      ],
+      "tipCalculation": {
+        "method": "税込合計金額 × 0.15〜0.20",
+        "examples": {
+          "$30の食事": "チップ $5〜$6",
+          "$50の食事": "チップ $8〜$10",
+          "$100の食事": "チップ $15〜$20"
+        }
+      }
+    },
+    "disney": {
+      "geniePlus": {
+        "description": "有料のFast Pass的なサービス。対象アトラクションのLightning Lane（早い列）を予約できる",
+        "price": "$30〜$35/人/日（変動制、当日アプリで確認）",
+        "howToUse": [
+          "Disneyland公式アプリをダウンロード",
+          "当日朝7時から購入可能",
+          "購入後、使いたいアトラクションをアプリで予約",
+          "1アトラクション終了または2時間経過で次を予約可能"
+        ],
+        "tips": "人気アトラクションは朝7時に購入と同時に予約。Matterhorn・Space Mountainは特に早い"
+      },
+      "lightningLaneIndividual": {
+        "description": "Genie+に含まれない超人気アトラクション用の個別購入",
+        "examples": ["Star Wars: Rise of the Resistance", "Radiator Springs Racers（DCA）"],
+        "price": "1アトラクション$20〜$25程度（変動制）"
+      },
+      "childrenInfo": {
+        "babyCenter": "授乳室・おむつ替えができる「Baby Center」がMain Street沿いにあります",
+        "riderSwitch": "身長制限のあるアトラクションで親が交互に乗れる「Rider Switch」制度あり",
+        "heightLimits": {
+          "Matterhorn Bobsleds": "35インチ（89cm）以上",
+          "Space Mountain": "40インチ（102cm）以上",
+          "Indiana Jones Adventure": "46インチ（117cm）以上",
+          "Big Thunder Mountain": "40インチ（102cm）以上"
+        }
+      },
+      "access": {
+        "fromLA": {
+          "uber": "$60〜$90、所要1時間前後",
+          "bus": "Flixbusやバスで約1.5〜2時間、$10〜$20",
+          "driving": "I-5 Southで約40分（渋滞なし）、駐車場$30/日"
+        }
+      }
+    }
+  },
+  "emergency": {
+    "911": {
+      "description": "救急・警察・消防すべて911",
+      "phrase": "Call 911, please! It's an emergency!"
+    },
+    "theft": {
+      "steps": [
+        "警察レポートを入手（Policeに連絡）",
+        "クレジットカードをすぐに止める（カード裏の番号に電話）",
+        "日本領事館に連絡（パスポート紛失の場合）",
+        "ホテルスタッフに助けを求める"
+      ],
+      "phrase": "I'd like to report a theft. My [belongings] was stolen."
+    },
+    "medicalEmergency": {
+      "severe": "911を呼ぶ",
+      "mild": "Urgent Care（予約不要、クレカで支払い）",
+      "findUrgentCare": "Google Mapで「urgent care near me」と検索",
+      "phrase": "I need medical assistance. My child is sick."
+    },
+    "lostChild": {
+      "steps": [
+        "近くのスタッフに即座に伝える",
+        "ディズニーなどパーク内は特にスタッフ対応が速い",
+        "警察（911）に連絡"
+      ],
+      "phrase": "My child is missing. He/She is [年齢] years old, wearing [服装]."
+    }
+  }
+}

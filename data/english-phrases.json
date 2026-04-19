@@ -1,0 +1,229 @@
+{
+  "categories": {
+    "airport": {
+      "title": "空港・入国",
+      "phrases": [
+        {
+          "id": "airport_001",
+          "situation": "観光目的を伝える",
+          "english": "The purpose of my visit is tourism.",
+          "pronunciation": "ザ パーパス オブ マイ ビジット イズ ツーリズム",
+          "meaning": "観光目的で来ました",
+          "tags": ["入国審査", "必須"]
+        },
+        {
+          "id": "airport_002",
+          "situation": "滞在日数を答える",
+          "english": "I'll be staying for [N] days.",
+          "pronunciation": "アイル ビー ステイング フォー [N] デイズ",
+          "meaning": "[N]日間滞在します",
+          "tags": ["入国審査", "必須"]
+        },
+        {
+          "id": "airport_003",
+          "situation": "ホテル名を伝える",
+          "english": "I'm staying at [hotel name].",
+          "pronunciation": "アイム ステイング アット [ホテル名]",
+          "meaning": "[ホテル]に泊まります",
+          "tags": ["入国審査"]
+        },
+        {
+          "id": "airport_004",
+          "situation": "Uber運転手を確認する",
+          "english": "Are you [driver's name]?",
+          "pronunciation": "アー ユー [名前]？",
+          "meaning": "[名前]さんですか？",
+          "tags": ["Uber", "必須"]
+        },
+        {
+          "id": "airport_005",
+          "situation": "荷物を紛失したとき",
+          "english": "My luggage is missing. Can you help me?",
+          "pronunciation": "マイ ラゲッジ イズ ミッシング。キャニュー ヘルプ ミー？",
+          "meaning": "荷物がなくなりました。助けてください",
+          "tags": ["トラブル", "紛失"]
+        }
+      ]
+    },
+    "restaurant": {
+      "title": "レストラン",
+      "phrases": [
+        {
+          "id": "restaurant_001",
+          "situation": "席を案内してもらう",
+          "english": "Table for [N], please.",
+          "pronunciation": "テーブル フォー [N]、プリーズ",
+          "meaning": "[N]人席をお願いします",
+          "tags": ["入店", "必須"]
+        },
+        {
+          "id": "restaurant_002",
+          "situation": "注文する（基本）",
+          "english": "I'll have the [dish name], please.",
+          "pronunciation": "アイル ハブ ザ [料理名]、プリーズ",
+          "meaning": "[料理名]をください",
+          "tags": ["注文", "必須"]
+        },
+        {
+          "id": "restaurant_003",
+          "situation": "お会計をお願いする",
+          "english": "Can I get the check, please?",
+          "pronunciation": "キャナイ ゲット ザ チェック、プリーズ？",
+          "meaning": "お会計をお願いします",
+          "tags": ["会計", "必須"]
+        },
+        {
+          "id": "restaurant_004",
+          "situation": "お水をもらう",
+          "english": "Can I get some water, please?",
+          "pronunciation": "キャナイ ゲット サム ウォーター、プリーズ？",
+          "meaning": "お水をいただけますか？",
+          "tags": ["注文"]
+        },
+        {
+          "id": "restaurant_005",
+          "situation": "アレルギーを伝える",
+          "english": "I'm allergic to [food]. Does this contain [food]?",
+          "pronunciation": "アイム アラジック トゥ [食材]。ダズ ディス コンテイン [食材]？",
+          "meaning": "[食材]アレルギーです。これに入っていますか？",
+          "tags": ["アレルギー", "重要"]
+        },
+        {
+          "id": "restaurant_006",
+          "situation": "子ども用椅子を頼む",
+          "english": "Do you have a high chair?",
+          "pronunciation": "ドゥ ユー ハブ ア ハイ チェア？",
+          "meaning": "ハイチェアはありますか？",
+          "tags": ["子連れ"]
+        },
+        {
+          "id": "restaurant_007",
+          "situation": "持ち帰りにする",
+          "english": "Can I get this to go, please?",
+          "pronunciation": "キャナイ ゲット ディス トゥ ゴー、プリーズ？",
+          "meaning": "これを持ち帰りにできますか？",
+          "tags": ["テイクアウト"]
+        },
+        {
+          "id": "restaurant_008",
+          "situation": "おかわりをもらう",
+          "english": "Can I get a refill, please?",
+          "pronunciation": "キャナイ ゲット ア リフィル、プリーズ？",
+          "meaning": "おかわりをもらえますか？（アメリカはドリンクのおかわり無料が多い）",
+          "tags": ["注文"]
+        }
+      ]
+    },
+    "hotel": {
+      "title": "ホテル",
+      "phrases": [
+        {
+          "id": "hotel_001",
+          "situation": "チェックインする",
+          "english": "I have a reservation under [name].",
+          "pronunciation": "アイ ハブ ア レザベーション アンダー [名前]",
+          "meaning": "[名前]で予約している者です",
+          "tags": ["チェックイン", "必須"]
+        },
+        {
+          "id": "hotel_002",
+          "situation": "部屋の問題を伝える",
+          "english": "There's a problem with my room. Can you help me?",
+          "pronunciation": "ゼアズ ア プロブレム ウィズ マイ ルーム。キャニュー ヘルプ ミー？",
+          "meaning": "部屋に問題があります。助けてください",
+          "tags": ["トラブル"]
+        },
+        {
+          "id": "hotel_003",
+          "situation": "チェックアウトする",
+          "english": "I'd like to check out, please.",
+          "pronunciation": "アイド ライク トゥ チェックアウト、プリーズ",
+          "meaning": "チェックアウトをお願いします",
+          "tags": ["チェックアウト"]
+        },
+        {
+          "id": "hotel_004",
+          "situation": "荷物を預かってもらう",
+          "english": "Can you keep my luggage until [time]?",
+          "pronunciation": "キャニュー キープ マイ ラゲッジ アンティル [時刻]？",
+          "meaning": "[時刻]まで荷物を預かってもらえますか？",
+          "tags": ["荷物"]
+        }
+      ]
+    },
+    "shopping": {
+      "title": "ショッピング",
+      "phrases": [
+        {
+          "id": "shopping_001",
+          "situation": "サイズを確認する",
+          "english": "Do you have this in [size]?",
+          "pronunciation": "ドゥ ユー ハブ ディス イン [サイズ]？",
+          "meaning": "これの[サイズ]はありますか？",
+          "tags": ["買い物"]
+        },
+        {
+          "id": "shopping_002",
+          "situation": "試着したい",
+          "english": "Can I try this on?",
+          "pronunciation": "キャナイ トライ ディス オン？",
+          "meaning": "試着できますか？",
+          "tags": ["買い物"]
+        },
+        {
+          "id": "shopping_003",
+          "situation": "袋をもらう",
+          "english": "Can I get a bag, please?",
+          "pronunciation": "キャナイ ゲット ア バッグ、プリーズ？",
+          "meaning": "袋をもらえますか？",
+          "tags": ["買い物"]
+        }
+      ]
+    },
+    "emergency": {
+      "title": "緊急時",
+      "phrases": [
+        {
+          "id": "emergency_001",
+          "situation": "救急を呼ぶ",
+          "english": "Call 911, please! It's an emergency!",
+          "pronunciation": "コール 911、プリーズ！イッツ アン エマージェンシー！",
+          "meaning": "911を呼んでください！緊急事態です！",
+          "tags": ["緊急", "最重要"]
+        },
+        {
+          "id": "emergency_002",
+          "situation": "盗難を報告する",
+          "english": "I'd like to report a theft. My [item] was stolen.",
+          "pronunciation": "アイド ライク トゥ リポート ア セフト。マイ [物] ワズ ストールン",
+          "meaning": "盗難を届けたいです。[物]が盗まれました",
+          "tags": ["緊急", "盗難"]
+        },
+        {
+          "id": "emergency_003",
+          "situation": "子どもが迷子になった",
+          "english": "My child is missing! He/She is [age] years old, wearing [description].",
+          "pronunciation": "マイ チャイルド イズ ミッシング！ヒー/シー イズ [年齢] イヤーズ オールド",
+          "meaning": "子どもがいなくなりました！[年齢]歳で[服装]を着ています",
+          "tags": ["緊急", "子連れ"]
+        },
+        {
+          "id": "emergency_004",
+          "situation": "医療が必要なとき",
+          "english": "I need medical assistance.",
+          "pronunciation": "アイ ニード メディカル アシスタンス",
+          "meaning": "医療の助けが必要です",
+          "tags": ["緊急", "医療"]
+        },
+        {
+          "id": "emergency_005",
+          "situation": "子どもが熱を出した",
+          "english": "My child has a fever. Where is the nearest urgent care?",
+          "pronunciation": "マイ チャイルド ハズ ア フィーバー。ウェア イズ ザ ニアレスト アージェント ケア？",
+          "meaning": "子どもが熱を出しました。最寄りの診療所はどこですか？",
+          "tags": ["緊急", "子連れ", "医療"]
+        }
+      ]
+    }
+  }
+}
