@@ -66,18 +66,27 @@ export async function POST(request: NextRequest) {
       console.log("ユーザーメッセージ:", userMessage);
 
       try {
-        console.log("Claude呼び出し開始...");
-        const reply = await generateReply(userMessage);
-        console.log("Claude返答取得完了");
+        // デバッグ: まず固定テキストで返信テスト
+        console.log("LINE返信テスト開始 - replyToken:", replyToken?.substring(0, 10));
+        console.log("ACCESS_TOKEN exists:", !!process.env.LINE_CHANNEL_ACCESS_TOKEN);
+        console.log("ACCESS_TOKEN length:", process.env.LINE_CHANNEL_ACCESS_TOKEN?.length);
+
+        const testReply = `[テスト] メッセージ受信: ${userMessage}`;
         const lineRes = await fetch("https://api.line.me/v2/bot/message/reply", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${process.env.LINE_CHANNEL_ACCESS_TOKEN}`,
           },
-          body: JSON.stringify({ replyToken, messages: [{ type: "text", text: reply }] }),
+          body: JSON.stringify({ replyToken, messages: [{ type: "text", text: testReply }] }),
         });
-        console.log("LINE返信結果:", lineRes.status, await lineRes.text());
+        const lineResText = await lineRes.text();
+        console.log("LINE返信結果:", lineRes.status, lineResText);
+
+        // Claude呼び出し（テスト後に有効化）
+        // console.log("Claude呼び出し開始...");
+        // const reply = await generateReply(userMessage);
+        // console.log("Claude返答取得完了");
       } catch (error) {
         console.error("エラー:", error);
       }
