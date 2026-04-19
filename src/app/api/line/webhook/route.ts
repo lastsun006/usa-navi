@@ -12,21 +12,6 @@ function verifySignature(body: string, signature: string | null): boolean {
   return hash === signature;
 }
 
-// LINEに返信する
-async function replyMessage(replyToken: string, text: string) {
-  await fetch("https://api.line.me/v2/bot/message/reply", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.LINE_CHANNEL_ACCESS_TOKEN}`,
-    },
-    body: JSON.stringify({
-      replyToken,
-      messages: [{ type: "text", text }],
-    }),
-  });
-}
-
 // Claudeで回答を生成する
 async function generateReply(userMessage: string): Promise<string> {
   const Anthropic = (await import("@anthropic-ai/sdk")).default;
@@ -50,13 +35,13 @@ export async function POST(request: NextRequest) {
   const body = await request.text();
   const signature = request.headers.get("x-line-signature");
 
-  // 署名検証（開発中はログのみ、本番では厳格に検証すること）
+  // 署名検証
   if (!verifySignature(body, signature)) {
-    console.warn("署名検証失敗 - 開発モードのため続行");
+    console.warn("署名検証失敗");
+    // 本番では return NextResponse.json({ status: "forbidden" }, { status: 403 });
   }
 
   const data = JSON.parse(body);
-  const debugResults: Record<string, unknown>[] = [];
 
   for (const event of data.events ?? []) {
     if (event.type === "message" && event.message.type === "text") {
@@ -64,31 +49,26 @@ export async function POST(request: NextRequest) {
       const replyToken = event.replyToken;
 
       try {
-        const tokenExists = !!process.env.LINE_CHANNEL_ACCESS_TOKEN;
-        const tokenLength = process.env.LINE_CHANNEL_ACCESS_TOKEN?.length ?? 0;
+        const reply = await generateReply(userMessage);
 
-        const testReply = `[テスト] メッセージ受信: ${userMessage}`;
         const lineRes = await fetch("https://api.line.me/v2/bot/message/reply", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${process.env.LINE_CHANNEL_ACCESS_TOKEN}`,
           },
-          body: JSON.stringify({ replyToken, messages: [{ type: "text", text: testReply }] }),
+          body: JSON.stringify({ replyToken, messages: [{ type: "text", text: reply }] }),
         });
-        const lineResText = await lineRes.text();
-        debugResults.push({
-          tokenExists,
-          tokenLength,
-          lineStatus: lineRes.status,
-          lineResponse: lineResText,
-          replyTokenPrefix: replyToken?.substring(0, 10),
-        });
+
+        if (!lineRes.ok) {
+          const errText = await lineRes.text();
+          console.error("LINE返信エラー:", lineRes.status, errText);
+        }
       } catch (error) {
-        debugResults.push({ error: String(error) });
+        console.error("エラー:", error);
       }
     }
   }
 
-  return NextResponse.json({ status: "ok", debug: debugResults });
+  return NextResponse.json({ status: "ok" });
 }
