@@ -56,20 +56,16 @@ export async function POST(request: NextRequest) {
   }
 
   const data = JSON.parse(body);
-  console.log("受信イベント数:", data.events?.length);
+  const debugResults: Record<string, unknown>[] = [];
 
   for (const event of data.events ?? []) {
-    console.log("イベント種類:", event.type, event.message?.type);
     if (event.type === "message" && event.message.type === "text") {
       const userMessage = event.message.text;
       const replyToken = event.replyToken;
-      console.log("ユーザーメッセージ:", userMessage);
 
       try {
-        // デバッグ: まず固定テキストで返信テスト
-        console.log("LINE返信テスト開始 - replyToken:", replyToken?.substring(0, 10));
-        console.log("ACCESS_TOKEN exists:", !!process.env.LINE_CHANNEL_ACCESS_TOKEN);
-        console.log("ACCESS_TOKEN length:", process.env.LINE_CHANNEL_ACCESS_TOKEN?.length);
+        const tokenExists = !!process.env.LINE_CHANNEL_ACCESS_TOKEN;
+        const tokenLength = process.env.LINE_CHANNEL_ACCESS_TOKEN?.length ?? 0;
 
         const testReply = `[テスト] メッセージ受信: ${userMessage}`;
         const lineRes = await fetch("https://api.line.me/v2/bot/message/reply", {
@@ -81,17 +77,18 @@ export async function POST(request: NextRequest) {
           body: JSON.stringify({ replyToken, messages: [{ type: "text", text: testReply }] }),
         });
         const lineResText = await lineRes.text();
-        console.log("LINE返信結果:", lineRes.status, lineResText);
-
-        // Claude呼び出し（テスト後に有効化）
-        // console.log("Claude呼び出し開始...");
-        // const reply = await generateReply(userMessage);
-        // console.log("Claude返答取得完了");
+        debugResults.push({
+          tokenExists,
+          tokenLength,
+          lineStatus: lineRes.status,
+          lineResponse: lineResText,
+          replyTokenPrefix: replyToken?.substring(0, 10),
+        });
       } catch (error) {
-        console.error("エラー:", error);
+        debugResults.push({ error: String(error) });
       }
     }
   }
 
-  return NextResponse.json({ status: "ok" });
+  return NextResponse.json({ status: "ok", debug: debugResults });
 }
