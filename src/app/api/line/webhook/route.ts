@@ -12,6 +12,35 @@ function verifySignature(body: string, signature: string | null): boolean {
   return hash === signature;
 }
 
+// 逆ジオコーディング（Nominatim / OpenStreetMap）
+interface NominatimResult {
+  display_name: string;
+  address: {
+    road?: string;
+    neighbourhood?: string;
+    suburb?: string;
+    city?: string;
+    town?: string;
+    village?: string;
+    county?: string;
+    state?: string;
+    country?: string;
+  };
+}
+
+async function reverseGeocode(lat: number, lng: number): Promise<NominatimResult | null> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`,
+      { headers: { "User-Agent": "USANavi/1.0 (travel-assistant-app)" } }
+    );
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
 // LAPD犯罪データ取得（800m四方の直近6ヶ月）
 async function fetchCrimeData(lat: number, lng: number): Promise<{ crm_cd_desc: string; cnt: string }[]> {
   const offset = { lat: 0.0072, lng: 0.009 }; // 約800m
@@ -32,32 +61,60 @@ async function fetchCrimeData(lat: number, lng: number): Promise<{ crm_cd_desc: 
   return res.json();
 }
 
-// Claudeで治安評価を生成
-async function generateSafetyReport(lat: number, lng: number, crimes: { crm_cd_desc: string; cnt: string }[]): Promise<string> {
+// Claudeで治安評価を生成（住所情報＋LAPDデータを両方活用）
+async function generateSafetyReport(
+  lat: number,
+  lng: number,
+  crimes: { crm_cd_desc: string; cnt: string }[],
+  geoInfo: NominatimResult | null,
+  lineAddress: string | undefined
+): Promise<string> {
   const Anthropic = (await import("@anthropic-ai/sdk")).default;
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+  // エリア情報を組み立て
+  const addr = geoInfo?.address;
+  const city = addr?.city || addr?.town || addr?.village || "不明";
+  const neighbourhood = addr?.neighbourhood || addr?.suburb || "";
+  const county = addr?.county || "";
+  const state = addr?.state || "";
+  const fullLocation = [neighbourhood, city, county, state].filter(Boolean).join(", ");
+
+  // LAPD犯罪データ
   const totalCrimes = crimes.reduce((sum, c) => sum + parseInt(c.cnt || "0"), 0);
-  const topCrimes = crimes.slice(0, 5).map(c => `${c.crm_cd_desc}: ${c.cnt}件`).join("\n");
-  const crimeText = crimes.length === 0
-    ? "この地域の犯罪記録データはありませんでした（LAPDの管轄外の可能性あり）。"
-    : `直近6ヶ月の犯罪総数: ${totalCrimes}件\n主な犯罪種別:\n${topCrimes}`;
+  const topCrimes = crimes.slice(0, 5).map(c => `  ・${c.crm_cd_desc}: ${c.cnt}件`).join("\n");
+
+  const lapdText = crimes.length === 0
+    ? "LAPDのデータなし（LAPD管轄外のエリア：オレンジ郡・サンタモニカ市・ビバリーヒルズ市などは独自の警察が管轄）"
+    : `直近6ヶ月の犯罪総数: ${totalCrimes}件\n主な犯罪:\n${topCrimes}`;
 
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 600,
-    system: `あなたはLA在住10年以上の日本人として、初めてアメリカを旅行する日本人に治安情報を日本語で教えるアドバイザーです。
-LAPDの犯罪データを基に、わかりやすく安全度を評価してください。
-以下の形式で回答してください（LINEで読みやすく）：
+    max_tokens: 700,
+    system: `あなたはLA・南カリフォルニア在住10年以上の日本人として、初めてアメリカを旅行する日本人に治安情報を日本語で教えるアドバイザーです。
 
-🔴🟡🟢 安全度：[星1〜5で表示] ★★★☆☆など
-📍 エリア概況：[2〜3文で地域の特徴]
-⚠️ 注意点：[具体的な注意事項を箇条書き2〜3個]
-✅ 安心ポイント：[ポジティブな点1〜2個]
-🏨 ホテル選びのヒント：[このエリアでの宿泊についてのアドバイス]`,
+以下の2つの観点を組み合わせて治安評価してください：
+1. 住所・エリア名から判断できる地域の特性（あなたの知識）
+2. LAPDの実際の犯罪データ（ただしLAPD管轄外エリアはデータなし）
+
+回答形式（LINEで読みやすく簡潔に）：
+📍 エリア：[特定した場所名]
+🔒 安全度：★★★★★（5段階）
+📊 データ：[LAPDデータの有無と概要、または管轄外の説明]
+⚠️ 注意：[箇条書き2〜3個]
+✅ 安心：[1〜2個]
+🏨 ホテルヒント：[このエリアの宿泊アドバイス]`,
     messages: [{
       role: "user",
-      content: `以下のLAPD犯罪データを元に、この位置（緯度${lat.toFixed(4)}, 経度${lng.toFixed(4)}）周辺800m以内の治安評価をしてください。\n\n${crimeText}`
+      content: `【位置情報】
+緯度: ${lat.toFixed(5)}, 経度: ${lng.toFixed(5)}
+LINEの住所: ${lineAddress || "なし"}
+逆ジオコーディング結果: ${fullLocation || geoInfo?.display_name || "取得失敗"}
+
+【LAPDデータ】
+${lapdText}
+
+上記を踏まえてこのエリアの治安評価をしてください。`
     }],
   });
 
@@ -119,15 +176,18 @@ export async function POST(request: NextRequest) {
       const { latitude, longitude, address } = event.message;
 
       try {
-        // まず「取得中」メッセージを送る（LAPDとClaudeで時間かかるため）
-        // ※ replyTokenは1回しか使えないので直接メインの返信を送る
-        const crimes = await fetchCrimeData(latitude, longitude);
-        const report = await generateSafetyReport(latitude, longitude, crimes);
+        // 逆ジオコーディング＋LAPDデータを並列取得
+        const [geoInfo, crimes] = await Promise.all([
+          reverseGeocode(latitude, longitude),
+          fetchCrimeData(latitude, longitude),
+        ]);
 
-        const locationLabel = address || `緯度${latitude.toFixed(4)}, 経度${longitude.toFixed(4)}`;
-        const fullMessage = `📍 ${locationLabel}\n\n${report}\n\n※ データ出典: LAPD犯罪データ（直近6ヶ月）`;
+        const report = await generateSafetyReport(latitude, longitude, crimes, geoInfo, address);
+        const footer = crimes.length > 0
+          ? "\n\n※ データ出典: LAPD犯罪データ（直近6ヶ月）"
+          : "\n\n※ このエリアはLAPD管轄外のため、エリア特性とClaude AIの知識をもとに評価しています";
 
-        await replyToLine(replyToken, [{ type: "text", text: fullMessage }]);
+        await replyToLine(replyToken, [{ type: "text", text: report + footer }]);
       } catch (error) {
         console.error("治安チェックエラー:", error);
         await replyToLine(replyToken, [{
