@@ -163,6 +163,40 @@ async function generateReply(userMessage: string): Promise<string> {
   return content.type === "text" ? content.text : "申し訳ありません、回答できませんでした。";
 }
 
+// メッセージ内容からユースケースを判定してクイックリプライを返す
+function getQuickReply(userMessage: string) {
+  const msg = userMessage;
+
+  // 各UCのキーワード
+  const isLAX     = /LAX|空港|フライト|到着|出発|乗り場/.test(msg);
+  const isDodgers = /ドジャース|野球|スタジアム|MLB/.test(msg);
+  const isFood    = /レストラン|グルメ|食事|食べ|ランチ|ディナー/.test(msg);
+  const isFamily  = /家族|子供|子ども|子連れ|ベビー|キッズ/.test(msg);
+  const isDisney  = /ディズニー|Disney|アナハイム/.test(msg);
+  const isSafety  = /治安|安全|危険|ホテル|エリア/.test(msg);
+
+  // そのUC以外の4つをレコメンドとして出す
+  const all = [
+    { label: "LAX移動",     text: "LAXから市内への行き方を教えて" },
+    { label: "ドジャース",   text: "ドジャースタジアムの楽しみ方を教えて" },
+    { label: "レストラン",   text: "LAのおすすめレストランを教えて" },
+    { label: "家族旅行",     text: "子連れ家族旅行のアドバイスをして" },
+    { label: "ディズニー",   text: "ディズニーランドの攻略法を教えて" },
+    { label: "治安チェック", text: "治安チェック：位置情報ピンを送ってください（+ボタン→位置情報）" },
+  ];
+
+  // 現在のUCを除外してシャッフルせず先頭4つ
+  const current = isLAX ? 0 : isDodgers ? 1 : isFood ? 2 : isFamily ? 3 : isDisney ? 4 : isSafety ? 5 : -1;
+  const recommendations = all.filter((_, i) => i !== current).slice(0, 4);
+
+  return {
+    items: recommendations.map(r => ({
+      type: "action",
+      action: { type: "message", label: r.label, text: r.text },
+    })),
+  };
+}
+
 // LINE返信
 async function replyToLine(replyToken: string, messages: object[]) {
   const res = await fetch("https://api.line.me/v2/bot/message/reply", {
@@ -209,7 +243,15 @@ export async function POST(request: NextRequest) {
           ? "\n\n※ データ出典: LAPD犯罪データ（直近6ヶ月）"
           : "\n\n※ このエリアはLAPD管轄外のため、エリア特性とClaude AIの知識をもとに評価しています";
 
-        await replyToLine(replyToken, [{ type: "text", text: report + footer }]);
+        const quickReply = {
+          items: [
+            { type: "action", action: { type: "message", label: "LAX移動",   text: "LAXから市内への行き方を教えて" } },
+            { type: "action", action: { type: "message", label: "レストラン", text: "LAのおすすめレストランを教えて" } },
+            { type: "action", action: { type: "message", label: "ディズニー", text: "ディズニーランドの攻略法を教えて" } },
+            { type: "action", action: { type: "message", label: "ドジャース", text: "ドジャースタジアムの楽しみ方を教えて" } },
+          ],
+        };
+        await replyToLine(replyToken, [{ type: "text", text: report + footer, quickReply }]);
       } catch (error) {
         console.error("治安チェックエラー:", error);
         await replyToLine(replyToken, [{
@@ -225,7 +267,8 @@ export async function POST(request: NextRequest) {
 
       try {
         const reply = await generateReply(userMessage);
-        await replyToLine(replyToken, [{ type: "text", text: reply }]);
+        const quickReply = getQuickReply(userMessage);
+        await replyToLine(replyToken, [{ type: "text", text: reply, quickReply }]);
       } catch (error) {
         console.error("返答エラー:", error);
       }
