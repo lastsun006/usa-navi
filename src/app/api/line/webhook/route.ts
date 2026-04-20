@@ -159,15 +159,30 @@ async function generateReply(userMessage: string): Promise<string> {
 - ホテルシャトル：無料の場合あり→事前確認を
 - タクシー：割高なのでUber/Lyft推奨
 
-■ LAとSoCal定番お土産：
-- Trader Joe's：エコバッグ・クッキーバター・ジャンブルGummies→日本未上陸で超人気
-- See's Candies：LAX・モールで買えるカリフォルニア定番チョコ
-- In-N-Out：Tシャツ・キャップ→西海岸限定でウケる
-- Erewhon：高級スーパーのトートバッグ→インスタ映え
-- ディズニーランドお土産：ミッキー耳カチューシャ・パークフード系
-- Universal Studios：ミニオン・ハリポタグッズ
-- ドジャース公式グッズ：ジャージ・キャップ→大谷翔平人気で日本でも話題
-- CVS/Walgreens：アメリカのお菓子・コスメ→コスパ最高のバラまき土産
+■ お土産：用途別おすすめ
+
+【自分用・こだわり派】
+- Trader Joe's クッキーバター（Cookie Butter）：日本未上陸、スプレッド系で絶対買うべき
+- Trader Joe's エコバッグ：$2以下でおしゃれ、何枚でも買えるくらい安い
+- Erewhon トートバッグ：セレブ御用達スーパーのバッグ、インスタ映え・LA感がある
+- In-N-Out Tシャツ・キャップ：西海岸限定、ファッションとして普通に使える
+- Farmer's Market（The Grove横）：ローカルの手作りジャム・ハチミツ・スパイス
+
+【会社用バラまき（コスパ重視）】
+- CVS/Walgreens：Reese's・Hershey's・Jolly Rancherなどアメリカのお菓子を大量買い、1袋$3〜5
+- Trader Joe's ジャンブルGummies：カラフルで見た目良し、大袋で買えてコスパ最高
+- See's Candies：個包装チョコのボックス、会社受けする見た目・値段も手頃
+
+【友達・家族へのちゃんとしたお土産】
+- See's Candies ボックス：カリフォルニア発祥の老舗チョコ、LAX・モール内にある
+- ドジャースグッズ（公式ショップ or スタジアム）：大谷翔平人気で今が一番ウケる、キャップ$40前後
+- ディズニーランドのパークグッズ：ミッキー耳・限定スナック缶など、パーク限定感が強い
+
+【ローカル・穴場】
+- Intelligentsia Coffee（シルバーレイクのロースター）：LA発の有名コーヒー豆、豆好きへの最高土産
+- Guittard Chocolate（スーパーで売ってる）：SF発の本格チョコチップ、製菓好きに刺さる
+- Tajín（メキシカンスパイス）：スーパーで$3、LA飯には欠かせない調味料、マニアックで喜ばれる
+- Bob's Red Mill（自然食品スーパー）：オートミール・プロテイン系、健康志向の人に
 
 ■ LAのショッピングスポット：
 - Citadel Outlets（シタデルアウトレット）：LAX近く・Coach・Nike等が安い
@@ -300,15 +315,31 @@ export async function POST(request: NextRequest) {
       const userMessage = event.message.text;
 
       try {
-        // 回答を先に生成→内容を見てフォローアップを生成（文脈精度優先）
-        const reply = await generateReply(userMessage);
-        const followUps = await generateFollowUps(userMessage, reply);
+        const isOmiyage = /お土産|おみやげ|souvenir/i.test(userMessage) && !/自分用|会社|友達|家族|ローカル|穴場|予算/.test(userMessage);
 
-        const quickReply = followUps.length > 0
-          ? { items: followUps.map(f => ({ type: "action", action: { type: "message", label: f.label, text: f.text } })) }
-          : undefined;
+        // お土産の最初の質問 → 絞り込みボタンを先に出す
+        if (isOmiyage) {
+          const reply = await generateReply(userMessage);
+          const quickReply = {
+            items: [
+              { type: "action", action: { type: "message", label: "自分用",       text: "自分へのお土産でこだわりたい。おすすめは？" } },
+              { type: "action", action: { type: "message", label: "会社バラまき", text: "会社用のバラまきお土産をコスパよく買いたい" } },
+              { type: "action", action: { type: "message", label: "友達・家族へ", text: "友達や家族へのちゃんとしたお土産が欲しい" } },
+              { type: "action", action: { type: "message", label: "ローカル限定", text: "観光客が知らないローカルなお土産を教えて" } },
+            ],
+          };
+          await replyToLine(replyToken, [{ type: "text", text: reply, quickReply }]);
+        } else {
+          // 通常の回答 → Claudeにフォローアップ生成させる
+          const reply = await generateReply(userMessage);
+          const followUps = await generateFollowUps(userMessage, reply);
 
-        await replyToLine(replyToken, [{ type: "text", text: reply, ...(quickReply && { quickReply }) }]);
+          const quickReply = followUps.length > 0
+            ? { items: followUps.map(f => ({ type: "action", action: { type: "message", label: f.label, text: f.text } })) }
+            : undefined;
+
+          await replyToLine(replyToken, [{ type: "text", text: reply, ...(quickReply && { quickReply }) }]);
+        }
       } catch (error) {
         console.error("返答エラー:", error);
       }
