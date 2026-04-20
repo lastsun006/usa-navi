@@ -268,7 +268,7 @@ export async function POST(request: NextRequest) {
         // 回答生成を先に、フォローアップは並列で
         const [reply, followUps] = await Promise.all([
           generateReply(userMessage),
-          generateFollowUps(userMessage, userMessage), // replyなしで先行生成
+          generateFollowUps(userMessage),
         ]);
 
         const quickReply = followUps.length > 0
