@@ -163,38 +163,31 @@ async function generateReply(userMessage: string): Promise<string> {
   return content.type === "text" ? content.text : "申し訳ありません、回答できませんでした。";
 }
 
-// メッセージ内容からユースケースを判定してクイックリプライを返す
-function getQuickReply(userMessage: string) {
-  const msg = userMessage;
+// Claudeに文脈に合った次の質問を3つ生成させる
+async function generateFollowUps(userMessage: string, reply: string): Promise<{ label: string; text: string }[]> {
+  const Anthropic = (await import("@anthropic-ai/sdk")).default;
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-  // 各UCのキーワード
-  const isLAX     = /LAX|空港|フライト|到着|出発|乗り場/.test(msg);
-  const isDodgers = /ドジャース|野球|スタジアム|MLB/.test(msg);
-  const isFood    = /レストラン|グルメ|食事|食べ|ランチ|ディナー/.test(msg);
-  const isFamily  = /家族|子供|子ども|子連れ|ベビー|キッズ/.test(msg);
-  const isDisney  = /ディズニー|Disney|アナハイム/.test(msg);
-  const isSafety  = /治安|安全|危険|ホテル|エリア/.test(msg);
+  const res = await anthropic.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 200,
+    system: `ユーザーの質問と回答を読んで、次に聞きたくなる自然なフォローアップ質問を3つ生成してください。
+必ずJSON配列で返してください。各要素は { "label": "ボタンに表示する短い日本語（10文字以内）", "text": "実際に送信される質問文" } の形式。
+余計な説明不要。JSONのみ返す。`,
+    messages: [{
+      role: "user",
+      content: `ユーザーの質問：${userMessage}\n\nBotの回答：${reply}`,
+    }],
+  });
 
-  // そのUC以外の4つをレコメンドとして出す
-  const all = [
-    { label: "LAX移動",     text: "LAXから市内への行き方を教えて" },
-    { label: "ドジャース",   text: "ドジャースタジアムの楽しみ方を教えて" },
-    { label: "レストラン",   text: "LAのおすすめレストランを教えて" },
-    { label: "家族旅行",     text: "子連れ家族旅行のアドバイスをして" },
-    { label: "ディズニー",   text: "ディズニーランドの攻略法を教えて" },
-    { label: "治安チェック", text: "治安チェック：位置情報ピンを送ってください（+ボタン→位置情報）" },
-  ];
-
-  // 現在のUCを除外してシャッフルせず先頭4つ
-  const current = isLAX ? 0 : isDodgers ? 1 : isFood ? 2 : isFamily ? 3 : isDisney ? 4 : isSafety ? 5 : -1;
-  const recommendations = all.filter((_, i) => i !== current).slice(0, 4);
-
-  return {
-    items: recommendations.map(r => ({
-      type: "action",
-      action: { type: "message", label: r.label, text: r.text },
-    })),
-  };
+  try {
+    const raw = res.content[0].type === "text" ? res.content[0].text : "[]";
+    const jsonStr = raw.match(/\[[\s\S]*\]/)?.[0] ?? "[]";
+    const parsed = JSON.parse(jsonStr);
+    return parsed.slice(0, 3);
+  } catch {
+    return [];
+  }
 }
 
 // LINE返信
@@ -266,9 +259,15 @@ export async function POST(request: NextRequest) {
       const userMessage = event.message.text;
 
       try {
+        // 回答生成とフォローアップ生成を並列で
         const reply = await generateReply(userMessage);
-        const quickReply = getQuickReply(userMessage);
-        await replyToLine(replyToken, [{ type: "text", text: reply, quickReply }]);
+        const followUps = await generateFollowUps(userMessage, reply);
+
+        const quickReply = followUps.length > 0
+          ? { items: followUps.map(f => ({ type: "action", action: { type: "message", label: f.label, text: f.text } })) }
+          : undefined;
+
+        await replyToLine(replyToken, [{ type: "text", text: reply, ...(quickReply && { quickReply }) }]);
       } catch (error) {
         console.error("返答エラー:", error);
       }
