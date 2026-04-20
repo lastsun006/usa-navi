@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 
+export const maxDuration = 60; // Vercel関数タイムアウトを60秒に延長
+
 // LINE署名検証
 function verifySignature(body: string, signature: string | null): boolean {
   if (!signature) return false;
@@ -164,25 +166,29 @@ async function generateReply(userMessage: string): Promise<string> {
 }
 
 // Claudeに文脈に合った次の質問を3つ生成させる
-async function generateFollowUps(userMessage: string): Promise<{ label: string; text: string }[]> {
+async function generateFollowUps(userMessage: string, reply: string): Promise<{ label: string; text: string }[]> {
   const Anthropic = (await import("@anthropic-ai/sdk")).default;
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
   const res = await anthropic.messages.create({
     model: "claude-haiku-4-5",
-    max_tokens: 200,
-    system: `ユーザーの質問を読んで、次に聞きたくなる自然なフォローアップ質問を3つ生成してください。
+    max_tokens: 250,
+    system: `アメリカ旅行中の日本人が使うLINE Botです。
+ユーザーの質問とBotの回答を読んで、この人が「次に自然に聞きたくなること」を3つ生成してください。
 
-【重要】以下の観点を必ず含めること：
-- 同じトピックの深掘り（例：LAXの話ならフライアウェイバス・メトロなど別の移動手段）
-- 子連れ・家族旅行の視点（例：LAXならチャイルドシート、レストランならキッズメニュー、移動なら子供料金）
-- 実際に困りそうな次のステップ（例：空港着いたら次はホテルチェックイン、観戦後の帰り方など）
+【必須ルール】
+- 回答の内容を踏まえた具体的な深掘り質問にする
+  例：Uber/Lyftの話が出たなら「チャイルドシートは？」「渋滞が多い時間は？」など
+- 必ず1つは子連れ・家族視点を入れる
+  例：LAX→「子連れでLAX-itまで移動できる？」、レストラン→「キッズメニューある店は？」
+- 次の行動ステップになる質問を入れる
+  例：空港移動→「ホテルのチェックイン何時から？」、観戦→「試合後の駐車場の出方は？」
+- labelは8文字以内、具体的に
 
-必ずJSON配列で返してください。各要素は { "label": "ボタンに表示する短い日本語（10文字以内）", "text": "実際に送信される質問文" } の形式。
-余計な説明不要。JSONのみ返す。`,
+JSON配列のみ返す。形式: [{"label":"...", "text":"..."}, ...]`,
     messages: [{
       role: "user",
-      content: `ユーザーの質問：${userMessage}`,
+      content: `質問：${userMessage}\n\n回答：${reply}`,
     }],
   });
 
@@ -265,11 +271,9 @@ export async function POST(request: NextRequest) {
       const userMessage = event.message.text;
 
       try {
-        // 回答生成を先に、フォローアップは並列で
-        const [reply, followUps] = await Promise.all([
-          generateReply(userMessage),
-          generateFollowUps(userMessage),
-        ]);
+        // 回答を先に生成→内容を見てフォローアップを生成（文脈精度優先）
+        const reply = await generateReply(userMessage);
+        const followUps = await generateFollowUps(userMessage, reply);
 
         const quickReply = followUps.length > 0
           ? { items: followUps.map(f => ({ type: "action", action: { type: "message", label: f.label, text: f.text } })) }
