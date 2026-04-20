@@ -157,7 +157,17 @@ async function generateReply(userMessage: string): Promise<string> {
 - メトロ（Cライン）：$1.75→安いが乗り換えあり・荷物多いと大変
 - フライアウェイバス：$9.75→ユニオンステーション直行で便利
 - ホテルシャトル：無料の場合あり→事前確認を
-- タクシー：割高なのでUber/Lyft推奨`,
+- タクシー：割高なのでUber/Lyft推奨
+
+■ LAとSoCal定番お土産：
+- Trader Joe's：エコバッグ・クッキーバター・ジャンブルGummies→日本未上陸で超人気
+- See's Candies：LAX・モールで買えるカリフォルニア定番チョコ
+- In-N-Out：Tシャツ・キャップ→西海岸限定でウケる
+- Erewhon：高級スーパーのトートバッグ→インスタ映え
+- ディズニーランドお土産：ミッキー耳カチューシャ・パークフード系
+- Universal Studios：ミニオン・ハリポタグッズ
+- ドジャース公式グッズ：ジャージ・キャップ→大谷翔平人気で日本でも話題
+- CVS/Walgreens：アメリカのお菓子・コスメ→コスパ最高のバラまき土産`,
     messages: [{ role: "user", content: userMessage }],
   });
 
@@ -250,10 +260,10 @@ export async function POST(request: NextRequest) {
 
         const quickReply = {
           items: [
-            { type: "action", action: { type: "message", label: "LAX移動",   text: "LAXから市内への行き方を教えて" } },
-            { type: "action", action: { type: "message", label: "レストラン", text: "LAのおすすめレストランを教えて" } },
-            { type: "action", action: { type: "message", label: "ディズニー", text: "ディズニーランドの攻略法を教えて" } },
-            { type: "action", action: { type: "message", label: "ドジャース", text: "ドジャースタジアムの楽しみ方を教えて" } },
+            { type: "action", action: { type: "location", label: "別の場所を調べる" } },
+            { type: "action", action: { type: "message", label: "お土産は？",   text: "このエリアのおすすめお土産を教えて" } },
+            { type: "action", action: { type: "message", label: "近くのグルメ", text: "このエリアの近くのおすすめレストランを教えて" } },
+            { type: "action", action: { type: "message", label: "ホテル選び",   text: "LAのホテル選びのコツを教えて" } },
           ],
         };
         await replyToLine(replyToken, [{ type: "text", text: report + footer, quickReply }]);
