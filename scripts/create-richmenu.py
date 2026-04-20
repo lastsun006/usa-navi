@@ -22,18 +22,21 @@ HEADERS = {"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json
 # ──────────────────────────────────────
 # 1. 画像生成
 # ──────────────────────────────────────
-W, H = 2500, 843
-COL, ROW = 3, 2
+W, H = 2500, 1686  # 3行×3列 (高さ2倍)
+COL, ROW = 3, 3
 CW, CH = W // COL, H // ROW
 
-# [アイコン文字, メインテキスト, サブテキスト, 背景色]
+# [アイコン文字, メインテキスト, 背景色]
 BUTTONS = [
-    ("LAX",    "空港から市内へ",    "#1A73E8"),
-    ("MLB",    "ドジャース観戦",    "#C41E3A"),
-    ("FOOD",   "グルメ・レストラン", "#E67E22"),
-    ("FAMILY", "子連れ家族旅行",    "#27AE60"),
-    ("DISNEY", "ディズニー攻略",    "#8E44AD"),
-    ("SAFETY", "治安チェック",      "#2C3E50"),
+    ("LAX",      "空港から市内へ",    "#1A73E8"),
+    ("MLB",      "ドジャース観戦",    "#C41E3A"),
+    ("FOOD",     "グルメ・レストラン", "#E67E22"),
+    ("FAMILY",   "子連れ家族旅行",    "#27AE60"),
+    ("DISNEY",   "ディズニー攻略",    "#8E44AD"),
+    ("SAFETY",   "治安チェック",      "#2C3E50"),
+    ("OMIYAGE",  "お土産ガイド",      "#D35400"),
+    ("SHOP",     "ショッピング",      "#1ABC9C"),
+    ("TIP",      "チップ・マナー",    "#7F8C8D"),
 ]
 
 img = Image.new("RGB", (W, H), "#FFFFFF")
@@ -89,12 +92,15 @@ print(f"✅ 画像生成: {out_path}")
 # 2. リッチメニュー作成
 # ──────────────────────────────────────
 ACTIONS = [
-    {"type": "message", "text": "LAXから市内への行き方を教えて"},
-    {"type": "message", "text": "ドジャースタジアムの楽しみ方を教えて"},
-    {"type": "message", "text": "LAのおすすめレストランを教えて"},
-    {"type": "message", "text": "子連れ家族旅行のアドバイスをして"},
-    {"type": "message", "text": "ディズニーランドの攻略法を教えて"},
+    {"type": "message",  "text": "LAXから市内への行き方を教えて"},
+    {"type": "message",  "text": "ドジャースタジアムの楽しみ方を教えて"},
+    {"type": "message",  "text": "LAのおすすめレストランを教えて"},
+    {"type": "message",  "text": "子連れ家族旅行のアドバイスをして"},
+    {"type": "message",  "text": "ディズニーランドの攻略法を教えて"},
     {"type": "location"},  # SAFETYボタン → 位置情報ピッカーを直接開く
+    {"type": "message",  "text": "LAのおすすめお土産を教えて"},
+    {"type": "message",  "text": "LAのショッピングスポットを教えて"},
+    {"type": "message",  "text": "アメリカのチップとマナーを教えて"},
 ]
 
 areas = []

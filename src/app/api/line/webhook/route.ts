@@ -167,7 +167,26 @@ async function generateReply(userMessage: string): Promise<string> {
 - ディズニーランドお土産：ミッキー耳カチューシャ・パークフード系
 - Universal Studios：ミニオン・ハリポタグッズ
 - ドジャース公式グッズ：ジャージ・キャップ→大谷翔平人気で日本でも話題
-- CVS/Walgreens：アメリカのお菓子・コスメ→コスパ最高のバラまき土産`,
+- CVS/Walgreens：アメリカのお菓子・コスメ→コスパ最高のバラまき土産
+
+■ LAのショッピングスポット：
+- Citadel Outlets（シタデルアウトレット）：LAX近く・Coach・Nike等が安い
+- Desert Hills Premium Outlets：Palm Springs方面・ブランド品が大幅割引
+- Beverly Center：ビバリーヒルズ近く・百貨店系
+- The Grove：ファーマーズマーケット隣接・おしゃれなオープンモール
+- Santa Monica Place：海沿い・観光がてらショッピング
+- Third Street Promenade：サンタモニカ・屋外歩行者天国・無料駐車場あり
+- Rodeo Drive：ビバリーヒルズ・超高級ブランド街（見るだけでも楽しい）
+- Erewhon：セレブ御用達の高級スーパー（トートバッグがお土産に人気）
+
+■ アメリカのチップとマナー：
+- レストラン：税抜き金額の18〜20%が標準。タブレット会計では最初にチップ%を選ぶ画面が出る
+- バー：ドリンク1杯につき$1〜2
+- タクシー/Uber：15〜18%（Uberはアプリで選択）
+- ホテルベルボーイ：荷物1個$1〜2
+- ホテルハウスキーピング：1泊$2〜5、枕元かメモ付きで置く
+- チップ不要な場所：ファストフード・コンビニ・セルフサービス（ただしiPad決済では催促画面が出ることあり→No Tipを選んでOK）
+- 英語："Keep the change."（おつりはとっておいて）`,
     messages: [{ role: "user", content: userMessage }],
   });
 
