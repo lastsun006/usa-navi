@@ -164,14 +164,14 @@ async function generateReply(userMessage: string): Promise<string> {
 }
 
 // Claudeに文脈に合った次の質問を3つ生成させる
-async function generateFollowUps(userMessage: string, reply: string): Promise<{ label: string; text: string }[]> {
+async function generateFollowUps(userMessage: string): Promise<{ label: string; text: string }[]> {
   const Anthropic = (await import("@anthropic-ai/sdk")).default;
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
   const res = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
+    model: "claude-haiku-4-5",
     max_tokens: 200,
-    system: `ユーザーの質問と回答を読んで、次に聞きたくなる自然なフォローアップ質問を3つ生成してください。
+    system: `ユーザーの質問を読んで、次に聞きたくなる自然なフォローアップ質問を3つ生成してください。
 
 【重要】以下の観点を必ず含めること：
 - 同じトピックの深掘り（例：LAXの話ならフライアウェイバス・メトロなど別の移動手段）
@@ -182,7 +182,7 @@ async function generateFollowUps(userMessage: string, reply: string): Promise<{ 
 余計な説明不要。JSONのみ返す。`,
     messages: [{
       role: "user",
-      content: `ユーザーの質問：${userMessage}\n\nBotの回答：${reply}`,
+      content: `ユーザーの質問：${userMessage}`,
     }],
   });
 
@@ -265,9 +265,11 @@ export async function POST(request: NextRequest) {
       const userMessage = event.message.text;
 
       try {
-        // 回答生成とフォローアップ生成を並列で
-        const reply = await generateReply(userMessage);
-        const followUps = await generateFollowUps(userMessage, reply);
+        // 回答生成を先に、フォローアップは並列で
+        const [reply, followUps] = await Promise.all([
+          generateReply(userMessage),
+          generateFollowUps(userMessage, userMessage), // replyなしで先行生成
+        ]);
 
         const quickReply = followUps.length > 0
           ? { items: followUps.map(f => ({ type: "action", action: { type: "message", label: f.label, text: f.text } })) }
