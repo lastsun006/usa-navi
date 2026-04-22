@@ -185,9 +185,14 @@ ${profileContext || "プロフィール未設定"}
 }
 
 // フォローアップ生成（Haiku使用）
-async function generateFollowUps(userMessage: string, reply: string): Promise<{ label: string; text: string }[]> {
+async function generateFollowUps(userMessage: string, reply: string, profile: UserProfile): Promise<{ label: string; text: string }[]> {
   const Anthropic = (await import("@anthropic-ai/sdk")).default;
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+  const profileContext = [
+    profile.age_group ? `年齢帯: ${profile.age_group}` : "",
+    profile.travel_purpose ? `旅の目的: ${profile.travel_purpose}` : "",
+  ].filter(Boolean).join("、");
 
   const res = await anthropic.messages.create({
     model: "claude-haiku-4-5",
@@ -195,9 +200,15 @@ async function generateFollowUps(userMessage: string, reply: string): Promise<{ 
     system: `アメリカ旅行中の日本人が使うLINE Botです。
 ユーザーの質問とBotの回答を読んで、この人が「次に自然に聞きたくなること」を3つ生成してください。
 
+【ユーザープロフィール】
+${profileContext || "未設定"}
+
 【必須ルール】
 - 回答の内容を踏まえた具体的な深掘り質問にする
-- 必ず1つは子連れ・家族視点を入れる
+- プロフィールに合わせた視点を必ず1つ入れる
+  例：家族旅行→チャイルドシート・子供料金・授乳室
+  例：カップル→ロマンチックなスポット・二人向けプラン
+  例：一人旅→安全情報・コスパ重視
 - 次の行動ステップになる質問を入れる
 - labelは8文字以内、具体的に
 
@@ -380,7 +391,7 @@ export async function POST(request: NextRequest) {
           await saveConversation(user.line_user_id, "user", userMessage);
           await saveConversation(user.line_user_id, "assistant", reply);
         }
-        const followUps = await generateFollowUps(userMessage, reply);
+        const followUps = await generateFollowUps(userMessage, reply, user!);
         const quickReply = followUps.length > 0
           ? { items: followUps.map(f => ({ type: "action", action: { type: "message", label: f.label, text: f.text } })) }
           : undefined;
