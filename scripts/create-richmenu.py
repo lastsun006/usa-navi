@@ -115,8 +115,8 @@ for i, action in enumerate(ACTIONS):
 menu_body = {
     "size": {"width": W, "height": H},
     "selected": True,
-    "name": "USA Navi メインメニュー",
-    "chatBarText": "USA Navi メニュー",
+    "name": "SoCal Navi メインメニュー",
+    "chatBarText": "SoCal Navi",
     "areas": areas,
 }
 
