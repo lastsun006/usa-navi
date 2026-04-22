@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
-import { getOrCreateUser, updateUser, UserProfile } from "@/lib/supabase";
+import { getOrCreateUser, updateUser, UserProfile, saveConversation, getRecentConversations, ConversationMessage } from "@/lib/supabase";
 
 export const maxDuration = 60;
 
@@ -96,15 +96,20 @@ async function handleOnboarding(replyToken: string, user: UserProfile, message: 
 // ──────────────────────────────────────
 // Claude AI 返答生成
 // ──────────────────────────────────────
-async function generateReply(userMessage: string, profile: UserProfile): Promise<string> {
+async function generateReply(userMessage: string, profile: UserProfile, history: ConversationMessage[]): Promise<string> {
   const Anthropic = (await import("@anthropic-ai/sdk")).default;
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-  // プロフィール情報をプロンプトに反映
   const profileContext = [
     profile.age_group ? `ユーザーの年齢帯: ${profile.age_group}` : "",
     profile.travel_purpose ? `旅の目的: ${profile.travel_purpose}` : "",
   ].filter(Boolean).join("\n");
+
+  // 会話履歴 + 今の質問を組み立て
+  const messages = [
+    ...history.map(h => ({ role: h.role as "user" | "assistant", content: h.content })),
+    { role: "user" as const, content: userMessage },
+  ];
 
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
@@ -172,7 +177,7 @@ ${profileContext || "プロフィール未設定"}
 - ホテルベルボーイ：荷物1個$1〜2
 - ホテルハウスキーピング：1泊$2〜5、枕元に置く
 - チップ不要：ファストフード・セルフサービス（iPad催促画面はNo Tipを選んでOK）`,
-    messages: [{ role: "user", content: userMessage }],
+    messages,
   });
 
   const content = response.content[0];
@@ -349,8 +354,16 @@ export async function POST(request: NextRequest) {
     try {
       const isOmiyage = /お土産|おみやげ/i.test(userMessage) && !/自分用|会社|友達|家族|ローカル|穴場/.test(userMessage);
 
+      // 会話履歴取得
+      const history = user ? await getRecentConversations(user.line_user_id) : [];
+
       if (isOmiyage) {
-        const reply = await generateReply(userMessage, user!);
+        const reply = await generateReply(userMessage, user!, history);
+        // 会話保存
+        if (user) {
+          await saveConversation(user.line_user_id, "user", userMessage);
+          await saveConversation(user.line_user_id, "assistant", reply);
+        }
         const quickReply = {
           items: [
             { type: "action", action: { type: "message", label: "自分用",       text: "自分へのこだわりのお土産が欲しい" } },
@@ -361,7 +374,12 @@ export async function POST(request: NextRequest) {
         };
         await replyToLine(replyToken, [{ type: "text", text: reply, quickReply }]);
       } else {
-        const reply = await generateReply(userMessage, user!);
+        const reply = await generateReply(userMessage, user!, history);
+        // 会話保存
+        if (user) {
+          await saveConversation(user.line_user_id, "user", userMessage);
+          await saveConversation(user.line_user_id, "assistant", reply);
+        }
         const followUps = await generateFollowUps(userMessage, reply);
         const quickReply = followUps.length > 0
           ? { items: followUps.map(f => ({ type: "action", action: { type: "message", label: f.label, text: f.text } })) }

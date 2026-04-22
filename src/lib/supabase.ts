@@ -46,3 +46,28 @@ export async function updateUser(lineUserId: string, updates: Partial<UserProfil
 
   if (error) throw error;
 }
+
+// 会話履歴の型
+export interface ConversationMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+// 会話を保存
+export async function saveConversation(lineUserId: string, role: "user" | "assistant", content: string) {
+  await supabase.from("conversations").insert({ line_user_id: lineUserId, role, content });
+}
+
+// 直近5往復（10件）取得
+export async function getRecentConversations(lineUserId: string): Promise<ConversationMessage[]> {
+  const { data } = await supabase
+    .from("conversations")
+    .select("role, content")
+    .eq("line_user_id", lineUserId)
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  if (!data) return [];
+  // 古い順に並び替えてから返す
+  return data.reverse().map(d => ({ role: d.role, content: d.content }));
+}
