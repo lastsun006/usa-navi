@@ -36,7 +36,7 @@ async function handleOnboarding(replyToken: string, user: UserProfile, message: 
     await updateUser(user.line_user_id, { onboarding_step: 1 });
     await replyToLine(replyToken, [{
       type: "text",
-      text: "はじめまして！USA Naviです🇺🇸\nより良いご案内のために、いくつか教えてください。（答えたくない項目はスキップできます）\n\nまず、年齢を教えてください👇",
+      text: "はじめまして！SoCal Naviです🇺🇸\nより良いご案内のために、いくつか教えてください。（答えたくない項目はスキップできます）\n\nまず、年齢を教えてください👇",
       quickReply: {
         items: [
           { type: "action", action: { type: "message", label: "10代以下", text: "__age_10代以下" } },
@@ -109,7 +109,7 @@ async function generateReply(userMessage: string, profile: UserProfile): Promise
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
     max_tokens: 1024,
-    system: `あなたは「USA Navi」という初めてアメリカを旅行する日本人をサポートするAIコンシェルジュです。
+    system: `あなたは「SoCal Navi」という初めてアメリカを旅行する日本人をサポートするAIコンシェルジュです。
 アメリカ在住10年以上の日本人として、旅行者が「今この状況でどう動けばいいか」を日本語で具体的に案内してください。
 
 【ユーザープロフィール】
