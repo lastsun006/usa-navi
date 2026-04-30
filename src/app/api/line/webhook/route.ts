@@ -483,6 +483,7 @@ export async function POST(request: NextRequest) {
 
     // __notify_ コマンド処理（オンボーディング外で届いた場合）
     if (userMessage.startsWith("__notify_") && user) {
+      try {
       const w = ["__notify_all", "__notify_weather"].includes(userMessage);
       const n = ["__notify_all", "__notify_news"].includes(userMessage);
       const r = ["__notify_all", "__notify_recommend"].includes(userMessage);
@@ -524,6 +525,10 @@ export async function POST(request: NextRequest) {
           ));
         }
         await Promise.all(pushTasks);
+      }
+      } catch (notifyErr) {
+        console.error("通知設定エラー:", notifyErr);
+        await replyToLine(replyToken, [{ type: "text", text: "通知設定中にエラーが発生しました。しばらく後に再度お試しください。\n\nエラー詳細: " + String(notifyErr) }]);
       }
       continue;
     }
