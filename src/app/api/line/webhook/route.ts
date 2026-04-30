@@ -28,6 +28,19 @@ async function replyToLine(replyToken: string, messages: object[]) {
   if (!res.ok) console.error("LINE返信エラー:", res.status, await res.text());
 }
 
+// LINE Push（replyTokenなしで送信）
+async function pushToUser(lineUserId: string, text: string) {
+  const res = await fetch("https://api.line.me/v2/bot/message/push", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${process.env.LINE_CHANNEL_ACCESS_TOKEN}`,
+    },
+    body: JSON.stringify({ to: lineUserId, messages: [{ type: "text", text }] }),
+  });
+  if (!res.ok) console.error("LINE Push エラー:", res.status, await res.text());
+}
+
 // ──────────────────────────────────────
 // オンボーディング
 // ──────────────────────────────────────
@@ -124,53 +137,44 @@ async function handleOnboarding(replyToken: string, user: UserProfile, message: 
       notifyRecommend && "おすすめ情報",
     ].filter(Boolean).join("・") || "なし";
 
-    // 返信メッセージを組み立て（最大5件）
-    const replyMessages: object[] = [];
-
     if (labels === "なし") {
-      replyMessages.push({
+      // 通知なし → 即reply
+      await replyToLine(replyToken, [{
         type: "text",
         text: "通知はオフに設定しました。\nいつでもメニューの「通知設定」から変更できます👇",
-      });
+      }]);
     } else {
-      // ウェルカムメッセージ
-      replyMessages.push({
+      // ① 確認メッセージを即reply（replyTokenを早めに消費）
+      await replyToLine(replyToken, [{
         type: "text",
-        text: `【${labels}】の通知をONにしました✅\n\n毎朝7時（LA時間）にお届けします。\n不要になったらいつでも「配信停止」と送ってください。\n\n今日の情報をお届けします👇`,
-      });
+        text: `【${labels}】の通知をONにしました✅\n\n毎朝7時（LA時間）にお届けします。\n不要になったらいつでも「配信停止」と送ってください。\n\n続けて今日の情報をお届けします📩`,
+      }]);
 
-      // 天気・ニュースを並列取得
+      // ② 天気・ニュースをpushで別送（APIを待ってから送る、replyToken不要）
       const [weather, news] = await Promise.all([
         notifyWeather ? fetchWeatherAlert() : Promise.resolve({ shouldNotify: false, message: "" }),
         notifyNews    ? fetchNewsAlert()    : Promise.resolve({ shouldNotify: false, message: "" }),
       ]);
 
+      const pushTasks: Promise<void>[] = [];
       if (notifyWeather) {
-        replyMessages.push({
-          type: "text",
-          text: weather.shouldNotify
+        pushTasks.push(pushToUser(
+          user.line_user_id,
+          weather.shouldNotify
             ? weather.message
-            : "☀️ 今日のSoCal：特に悪天候の予報はありません。お出かけ日和です！",
-        });
+            : "☀️ 今日のSoCal：特に悪天候の予報はありません。お出かけ日和です！"
+        ));
       }
-
       if (notifyNews) {
-        replyMessages.push({
-          type: "text",
-          text: news.shouldNotify
+        pushTasks.push(pushToUser(
+          user.line_user_id,
+          news.shouldNotify
             ? news.message
-            : "✅ 現在、デモ・道路閉鎖・緊急事態などの情報はありません。",
-        });
+            : "✅ 現在、デモ・道路閉鎖・緊急事態などの情報はありません。"
+        ));
       }
+      await Promise.all(pushTasks);
     }
-
-    // 最後に案内メッセージ
-    replyMessages.push({
-      type: "text",
-      text: "下のメニューから気になるカテゴリを選んでください👇",
-    });
-
-    await replyToLine(replyToken, replyMessages.slice(0, 5));
     return;
   }
 }
@@ -490,35 +494,36 @@ export async function POST(request: NextRequest) {
       if (labelList.length === 0) {
         await replyToLine(replyToken, [{ type: "text", text: "通知をすべてオフにしました。\nまた必要なときはメニューの「通知設定」から変更できます。" }]);
       } else {
-        // 確認メッセージ＋今日の情報を即送信
-        const replyMessages: object[] = [{
+        // ① 確認メッセージを即reply（replyTokenを早めに消費）
+        await replyToLine(replyToken, [{
           type: "text",
-          text: `【${labels}】の通知をONにしました✅\n\n毎朝7時（LA時間）にお届けします。\n不要になったらいつでも「配信停止」と送ってください。\n\n今日の情報をお届けします👇`,
-        }];
+          text: `【${labels}】の通知をONにしました✅\n\n毎朝7時（LA時間）にお届けします。\n不要になったらいつでも「配信停止」と送ってください。\n\n続けて今日の情報をお届けします📩`,
+        }]);
 
+        // ② 天気・ニュースをpushで別送（replyToken不要）
         const [weather, news] = await Promise.all([
           w ? fetchWeatherAlert() : Promise.resolve({ shouldNotify: false, message: "" }),
           n ? fetchNewsAlert()    : Promise.resolve({ shouldNotify: false, message: "" }),
         ]);
 
+        const pushTasks: Promise<void>[] = [];
         if (w) {
-          replyMessages.push({
-            type: "text",
-            text: weather.shouldNotify
+          pushTasks.push(pushToUser(
+            user.line_user_id,
+            weather.shouldNotify
               ? weather.message
-              : "☀️ 今日のSoCal：特に悪天候の予報はありません。お出かけ日和です！",
-          });
+              : "☀️ 今日のSoCal：特に悪天候の予報はありません。お出かけ日和です！"
+          ));
         }
         if (n) {
-          replyMessages.push({
-            type: "text",
-            text: news.shouldNotify
+          pushTasks.push(pushToUser(
+            user.line_user_id,
+            news.shouldNotify
               ? news.message
-              : "✅ 現在、デモ・道路閉鎖・緊急事態などの情報はありません。",
-          });
+              : "✅ 現在、デモ・道路閉鎖・緊急事態などの情報はありません。"
+          ));
         }
-
-        await replyToLine(replyToken, replyMessages.slice(0, 5));
+        await Promise.all(pushTasks);
       }
       continue;
     }
