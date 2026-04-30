@@ -4,6 +4,8 @@ import { getOrCreateUser, updateUser, UserProfile, saveConversation, getRecentCo
 import { searchKnowledge } from "@/lib/knowledge-base";
 import { filterVerifiedBusinesses, formatBusinessForPrompt } from "@/lib/verify";
 import { fetchWeatherAlert, fetchNewsAlert } from "@/lib/daily-alerts";
+import { isHotelQuery, buildHotelFlexMessage, HOTEL_ZONE_TIPS } from "@/lib/hotel-affiliate";
+import { detectArea } from "@/lib/knowledge-base";
 
 export const maxDuration = 60;
 
@@ -595,13 +597,20 @@ export async function POST(request: NextRequest) {
     // オンボーディング完了後 → 通常の返答
     try {
       const isOmiyage = /お土産|おみやげ/i.test(userMessage) && !/自分用|会社|友達|家族|ローカル|穴場/.test(userMessage);
+      const isHotel   = isHotelQuery(userMessage);
+
+      // エリア検出（ホテルアフィリ用）
+      const detectedAreas = detectArea(userMessage);
+      const hotelArea = detectedAreas.find(a => ["LA","Anaheim","SanDiego","SoCal"].includes(a)) ?? "LA";
+
+      // ホテル質問ならシステムプロンプトにゾーンTipsを追加
+      const hotelContext = isHotel ? `\n\n${HOTEL_ZONE_TIPS[hotelArea] ?? HOTEL_ZONE_TIPS.LA}` : "";
 
       // 会話履歴取得
       const history = user ? await getRecentConversations(user.line_user_id) : [];
 
       if (isOmiyage) {
         const reply = await generateReply(userMessage, user!, history);
-        // 会話保存
         if (user) {
           await saveConversation(user.line_user_id, "user", userMessage);
           await saveConversation(user.line_user_id, "assistant", reply);
@@ -615,9 +624,30 @@ export async function POST(request: NextRequest) {
           ],
         };
         await replyToLine(replyToken, [{ type: "text", text: reply, quickReply }]);
+
+      } else if (isHotel) {
+        // ホテル質問 → Claude回答 ＋ Booking.com アフィリFlexカード
+        const reply = await generateReply(userMessage + hotelContext, user!, history);
+        if (user) {
+          await saveConversation(user.line_user_id, "user", userMessage);
+          await saveConversation(user.line_user_id, "assistant", reply);
+        }
+        const hotelCard = buildHotelFlexMessage(hotelArea);
+        const quickReply = {
+          items: [
+            { type: "action", action: { type: "message", label: "サンタモニカ周辺", text: "サンタモニカ周辺のホテルを教えて" } },
+            { type: "action", action: { type: "message", label: "ハリウッド周辺",   text: "ハリウッド周辺のホテルを教えて" } },
+            { type: "action", action: { type: "message", label: "予算$100以下",     text: "LAでコスパの良いホテルを教えて（予算$100以下）" } },
+            { type: "action", action: { type: "message", label: "家族向け",         text: "子連れ家族に向いているホテルエリアは？" } },
+          ],
+        };
+        await replyToLine(replyToken, [
+          { type: "text", text: reply, quickReply },
+          hotelCard,
+        ]);
+
       } else {
         const reply = await generateReply(userMessage, user!, history);
-        // 会話保存
         if (user) {
           await saveConversation(user.line_user_id, "user", userMessage);
           await saveConversation(user.line_user_id, "assistant", reply);
