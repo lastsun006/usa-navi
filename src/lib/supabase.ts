@@ -14,6 +14,9 @@ export interface UserProfile {
   travel_purpose: string | null;
   onboarding_done: boolean;
   onboarding_step: number;
+  notify_weather: boolean;
+  notify_news: boolean;
+  notify_recommend: boolean;
 }
 
 // ユーザー取得（なければ作成）
@@ -45,6 +48,16 @@ export async function updateUser(lineUserId: string, updates: Partial<UserProfil
     .eq("line_user_id", lineUserId);
 
   if (error) throw error;
+}
+
+// 通知をONにしているユーザー全員取得
+export async function getUsersWithNotification(type: "weather" | "news" | "recommend"): Promise<UserProfile[]> {
+  const col = type === "weather" ? "notify_weather" : type === "news" ? "notify_news" : "notify_recommend";
+  const { data } = await supabase
+    .from("users")
+    .select("*")
+    .eq(col, true);
+  return data ?? [];
 }
 
 // 会話履歴の型

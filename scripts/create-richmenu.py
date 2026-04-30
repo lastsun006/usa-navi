@@ -36,7 +36,7 @@ BUTTONS = [
     ("SAFETY",   "治安チェック",      "#2C3E50"),
     ("OMIYAGE",  "お土産ガイド",      "#D35400"),
     ("SHOP",     "ショッピング",      "#1ABC9C"),
-    ("TIP",      "チップ・マナー",    "#7F8C8D"),
+    ("NOTIFY",   "通知設定",          "#7F8C8D"),
 ]
 
 img = Image.new("RGB", (W, H), "#FFFFFF")
@@ -100,7 +100,7 @@ ACTIONS = [
     {"type": "location"},  # SAFETYボタン → 位置情報ピッカーを直接開く
     {"type": "message",  "text": "LAのおすすめお土産を教えて"},
     {"type": "message",  "text": "LAのショッピングスポットを教えて"},
-    {"type": "message",  "text": "アメリカのチップとマナーを教えて"},
+    {"type": "message",  "text": "通知設定"},
 ]
 
 areas = []
