@@ -1,5 +1,13 @@
 import type { Metadata, Viewport } from "next";
+import { Noto_Sans_JP } from "next/font/google";
 import "./globals.css";
+
+const noto = Noto_Sans_JP({
+  subsets: ["latin"],
+  weight: ["400", "500", "700", "900"],
+  display: "swap",
+  variable: "--font-noto",
+});
 
 export const metadata: Metadata = {
   title: "USA Navi — 初めてのアメリカ旅行をサポートするAIコンシェルジュ",
@@ -19,7 +27,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja" className="h-full">
-      <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
+      <body className={`${noto.variable} font-[family-name:var(--font-noto)] min-h-full flex flex-col bg-white text-slate-900`}>
         {children}
       </body>
     </html>
