@@ -483,8 +483,43 @@ export async function POST(request: NextRequest) {
       const n = ["__notify_all", "__notify_news"].includes(userMessage);
       const r = ["__notify_all", "__notify_recommend"].includes(userMessage);
       await updateUser(user.line_user_id, { notify_weather: w, notify_news: n, notify_recommend: r });
-      const labels = [w && "天気", n && "ニュース", r && "おすすめ情報"].filter(Boolean).join("・") || "なし";
-      await replyToLine(replyToken, [{ type: "text", text: `通知設定を「${labels}」に変更しました ✅` }]);
+
+      const labelList = [w && "天気アラート", n && "ニュース・安全情報", r && "おすすめ情報"].filter(Boolean);
+      const labels = labelList.join("・") || "なし";
+
+      if (labelList.length === 0) {
+        await replyToLine(replyToken, [{ type: "text", text: "通知をすべてオフにしました。\nまた必要なときはメニューの「通知設定」から変更できます。" }]);
+      } else {
+        // 確認メッセージ＋今日の情報を即送信
+        const replyMessages: object[] = [{
+          type: "text",
+          text: `【${labels}】の通知をONにしました✅\n\n毎朝7時（LA時間）にお届けします。\n不要になったらいつでも「配信停止」と送ってください。\n\n今日の情報をお届けします👇`,
+        }];
+
+        const [weather, news] = await Promise.all([
+          w ? fetchWeatherAlert() : Promise.resolve({ shouldNotify: false, message: "" }),
+          n ? fetchNewsAlert()    : Promise.resolve({ shouldNotify: false, message: "" }),
+        ]);
+
+        if (w) {
+          replyMessages.push({
+            type: "text",
+            text: weather.shouldNotify
+              ? weather.message
+              : "☀️ 今日のSoCal：特に悪天候の予報はありません。お出かけ日和です！",
+          });
+        }
+        if (n) {
+          replyMessages.push({
+            type: "text",
+            text: news.shouldNotify
+              ? news.message
+              : "✅ 現在、デモ・道路閉鎖・緊急事態などの情報はありません。",
+          });
+        }
+
+        await replyToLine(replyToken, replyMessages.slice(0, 5));
+      }
       continue;
     }
 
