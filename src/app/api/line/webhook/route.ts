@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { getOrCreateUser, updateUser, UserProfile, saveConversation, getRecentConversations, ConversationMessage } from "@/lib/supabase";
+import { searchKnowledge } from "@/lib/knowledge-base";
+import { filterVerifiedBusinesses, formatBusinessForPrompt } from "@/lib/verify";
+import { fetchWeatherAlert, fetchNewsAlert } from "@/lib/daily-alerts";
 
 export const maxDuration = 60;
 
@@ -75,20 +78,99 @@ async function handleOnboarding(replyToken: string, user: UserProfile, message: 
     return;
   }
 
-  // Step 2: 目的を受け取る → 完了
+  // Step 2: 目的を受け取る → 通知選択へ
   if (step === 2) {
     const purpose = message.startsWith("__purpose_") ? message.replace("__purpose_", "") : null;
+    const purposeLabel = purpose && purpose !== "skip" ? purpose : "旅行";
     await updateUser(user.line_user_id, {
       travel_purpose: purpose === "skip" ? null : purpose,
-      onboarding_done: true,
       onboarding_step: 3,
     });
+    await replyToLine(replyToken, [
+      { type: "text", text: `ありがとうございます！${purposeLabel}を思いっきり楽しめるようサポートします🎉` },
+      {
+        type: "text",
+        text: "最後に！旅行中に受け取りたい通知を選んでください📲\n\n・天気アラート（雨・猛暑など）\n・ニュース（デモ・道路閉鎖・安全情報）\n・おすすめ情報（イベント・お得情報など）\n\n不要になったらいつでも「配信停止」と送ればOKです。",
+        quickReply: {
+          items: [
+            { type: "action", action: { type: "message", label: "全部受け取る",      text: "__notify_all" } },
+            { type: "action", action: { type: "message", label: "天気だけ",          text: "__notify_weather" } },
+            { type: "action", action: { type: "message", label: "ニュースだけ",      text: "__notify_news" } },
+            { type: "action", action: { type: "message", label: "おすすめだけ",      text: "__notify_recommend" } },
+            { type: "action", action: { type: "message", label: "通知はいらない",    text: "__notify_none" } },
+          ],
+        },
+      },
+    ]);
+    return;
+  }
 
-    const purposeLabel = purpose && purpose !== "skip" ? purpose : "旅行";
-    await replyToLine(replyToken, [{
+  // Step 3: 通知設定を受け取る → 完了 + 今日の情報を即送信
+  if (step === 3) {
+    const notifyWeather   = ["__notify_all", "__notify_weather"].includes(message);
+    const notifyNews      = ["__notify_all", "__notify_news"].includes(message);
+    const notifyRecommend = ["__notify_all", "__notify_recommend"].includes(message);
+    await updateUser(user.line_user_id, {
+      notify_weather:   notifyWeather,
+      notify_news:      notifyNews,
+      notify_recommend: notifyRecommend,
+      onboarding_done:  true,
+      onboarding_step:  4,
+    });
+
+    const labels = [
+      notifyWeather   && "天気アラート",
+      notifyNews      && "ニュース・安全情報",
+      notifyRecommend && "おすすめ情報",
+    ].filter(Boolean).join("・") || "なし";
+
+    // 返信メッセージを組み立て（最大5件）
+    const replyMessages: object[] = [];
+
+    if (labels === "なし") {
+      replyMessages.push({
+        type: "text",
+        text: "通知はオフに設定しました。\nいつでもメニューの「通知設定」から変更できます👇",
+      });
+    } else {
+      // ウェルカムメッセージ
+      replyMessages.push({
+        type: "text",
+        text: `【${labels}】の通知をONにしました✅\n\n毎朝7時（LA時間）にお届けします。\n不要になったらいつでも「配信停止」と送ってください。\n\n今日の情報をお届けします👇`,
+      });
+
+      // 天気・ニュースを並列取得
+      const [weather, news] = await Promise.all([
+        notifyWeather ? fetchWeatherAlert() : Promise.resolve({ shouldNotify: false, message: "" }),
+        notifyNews    ? fetchNewsAlert()    : Promise.resolve({ shouldNotify: false, message: "" }),
+      ]);
+
+      if (notifyWeather) {
+        replyMessages.push({
+          type: "text",
+          text: weather.shouldNotify
+            ? weather.message
+            : "☀️ 今日のSoCal：特に悪天候の予報はありません。お出かけ日和です！",
+        });
+      }
+
+      if (notifyNews) {
+        replyMessages.push({
+          type: "text",
+          text: news.shouldNotify
+            ? news.message
+            : "✅ 現在、デモ・道路閉鎖・緊急事態などの情報はありません。",
+        });
+      }
+    }
+
+    // 最後に案内メッセージ
+    replyMessages.push({
       type: "text",
-      text: `ありがとうございます！${purposeLabel}を思いっきり楽しめるようサポートします🎉\n\n下のメニューから気になるカテゴリを選んでください👇`,
-    }]);
+      text: "下のメニューから気になるカテゴリを選んでください👇",
+    });
+
+    await replyToLine(replyToken, replyMessages.slice(0, 5));
     return;
   }
 }
@@ -104,6 +186,17 @@ async function generateReply(userMessage: string, profile: UserProfile, history:
     profile.age_group ? `ユーザーの年齢帯: ${profile.age_group}` : "",
     profile.travel_purpose ? `旅の目的: ${profile.travel_purpose}` : "",
   ].filter(Boolean).join("\n");
+
+  // ── ナレッジ検索＋営業確認 ──────────────────
+  const matched = searchKnowledge(userMessage, 3);
+  let knowledgeSection = "";
+  if (matched.length > 0) {
+    const verified = await filterVerifiedBusinesses(matched);
+    const blocks = verified.map(({ business, status }) =>
+      formatBusinessForPrompt(business, status)
+    );
+    knowledgeSection = `\n\n【日系サービス情報（ビビナビ・LALALAより、営業確認済み）】\n${blocks.join("\n\n")}`;
+  }
 
   // 会話履歴 + 今の質問を組み立て
   const messages = [
@@ -121,14 +214,18 @@ async function generateReply(userMessage: string, profile: UserProfile, history:
 ${profileContext || "プロフィール未設定"}
 
 【回答ルール・厳守】
-- 200文字以内に必ず収める
-- 表・箇条書きの多用禁止。シンプルな文章で
+- 通常は200文字以内に収める
+- 救急・ER・保険・病院など医療緊急系の質問は400文字まで許可（手順や連絡先を省略しない）
+- 表・箇条書きの多用禁止。シンプルな文章で（医療緊急時は手順リストOK）
 - 「何かご不明な点は？」などの締めの言葉は不要
 - 最重要ポイントを1〜2個に絞って伝える
 - LINEのチャットで自然に読めるトーンで
 - 英語フレーズが必要な時のみ「英語:"..."」を添える
 - プロフィールがある場合はそれに合わせた情報を優先する
   例：家族旅行→子連れ目線、20代カップル→デート向けスポット
+- 【食事案内の鉄則】ユーザーは日本からの旅行者。わざわざアメリカに来て日本食を食べる必要はない。
+  食事を聞かれたらアメリカならではの体験（In-N-Out・ハンバーガー・タコス・シーフード・BBQ・ブランチ等）を優先して案内する。
+  「日本食が食べたい」と明示された場合のみ日系レストランを案内する。
 
 【重要な現地知識】
 
@@ -143,6 +240,20 @@ ${profileContext || "プロフィール未設定"}
 - フライアウェイバス：$9.75→ユニオンステーション直行で便利
 - ホテルシャトル：無料の場合あり→事前確認を
 - タクシー：割高なのでUber/Lyft推奨
+
+■ アメリカ・SoCalのグルメ体験（食事を聞かれたらまずこれを案内）：
+【絶対外せない定番】
+- In-N-Out Burger：西海岸限定、ダブルダブルが定番。「アニマルスタイル」は隠れメニュー。$5〜
+- タコス：LA・SDはメキシコ系タコスが最高。本場の味。$3〜
+- ブランチ：週末はどこのカフェも行列。エッグベネディクト・アボカドトーストが定番
+- Erewhon のスムージー：セレブ御用達、$20超えだが「LA体験」として人気
+- フードトラック：ハンバーガー・メキシカン・韓国系など。LAらしい食文化
+【エリア別おすすめ】
+- サンタモニカ：シーフード・オーシャンビューのレストランで贅沢ランチ
+- ベニスビーチ：カフェ巡り・ビーチサイドのタコス
+- アナハイム（ディズニー周辺）：パーク内フードもアメリカ体験のひとつ
+- サンディエゴ：新鮮なシーフード、ガスランプクォーターの多国籍グルメ
+- リトルイタリー（SD）：本格イタリアン、週末マーケットも
 
 ■ お土産：用途別おすすめ
 【自分用・こだわり派】
@@ -176,7 +287,12 @@ ${profileContext || "プロフィール未設定"}
 - タクシー/Uber：15〜18%（Uberはアプリで選択）
 - ホテルベルボーイ：荷物1個$1〜2
 - ホテルハウスキーピング：1泊$2〜5、枕元に置く
-- チップ不要：ファストフード・セルフサービス（iPad催促画面はNo Tipを選んでOK）`,
+- チップ不要：ファストフード・セルフサービス（iPad催促画面はNo Tipを選んでOK）${knowledgeSection}
+
+【日系サービスの案内ルール】
+- 上記「日系サービス情報」に該当するビジネスがある場合は、具体的な店名・電話番号・URLを含めて案内する
+- 「（※ 最新情報は公式サイト・電話でご確認ください）」と表示されているものは、その注意書きをそのまま伝える
+- ビジネス情報がない場合は、ビビナビ(losangeles.vivinavi.com)やライトハウス(us-lighthouse.com)で検索できることを案内する`,
     messages,
   });
 
@@ -358,6 +474,76 @@ export async function POST(request: NextRequest) {
     // オンボーディング中
     if (user && !user.onboarding_done) {
       await handleOnboarding(replyToken, user, userMessage);
+      continue;
+    }
+
+    // __notify_ コマンド処理（オンボーディング外で届いた場合）
+    if (userMessage.startsWith("__notify_") && user) {
+      const w = ["__notify_all", "__notify_weather"].includes(userMessage);
+      const n = ["__notify_all", "__notify_news"].includes(userMessage);
+      const r = ["__notify_all", "__notify_recommend"].includes(userMessage);
+      await updateUser(user.line_user_id, { notify_weather: w, notify_news: n, notify_recommend: r });
+      const labels = [w && "天気", n && "ニュース", r && "おすすめ情報"].filter(Boolean).join("・") || "なし";
+      await replyToLine(replyToken, [{ type: "text", text: `通知設定を「${labels}」に変更しました ✅` }]);
+      continue;
+    }
+
+    // 「配信停止」→ どれを止めるか選ばせる
+    if (/配信停止|通知停止|通知をやめ|通知オフ/.test(userMessage) && user) {
+      const current = [
+        user.notify_weather   && "天気",
+        user.notify_news      && "ニュース",
+        user.notify_recommend && "おすすめ情報",
+      ].filter(Boolean);
+
+      if (current.length === 0) {
+        await replyToLine(replyToken, [{ type: "text", text: "現在、通知はすべてオフになっています。" }]);
+      } else {
+        await replyToLine(replyToken, [{
+          type: "text",
+          text: `現在「${current.join("・")}」の通知をお届けしています。\nどれを停止しますか？`,
+          quickReply: {
+            items: [
+              ...(user.notify_weather   ? [{ type: "action", action: { type: "message", label: "天気を停止",        text: "__stop_weather" } }] : []),
+              ...(user.notify_news      ? [{ type: "action", action: { type: "message", label: "ニュースを停止",    text: "__stop_news" } }] : []),
+              ...(user.notify_recommend ? [{ type: "action", action: { type: "message", label: "おすすめを停止",    text: "__stop_recommend" } }] : []),
+              { type: "action", action: { type: "message", label: "すべて停止", text: "__stop_all" } },
+            ],
+          },
+        }]);
+      }
+      continue;
+    }
+
+    // 配信停止の個別処理
+    if (userMessage.startsWith("__stop_") && user) {
+      const updates: Record<string, boolean> = {};
+      if (userMessage === "__stop_all")       { updates.notify_weather = false; updates.notify_news = false; updates.notify_recommend = false; }
+      if (userMessage === "__stop_weather")   updates.notify_weather   = false;
+      if (userMessage === "__stop_news")      updates.notify_news      = false;
+      if (userMessage === "__stop_recommend") updates.notify_recommend = false;
+      await updateUser(user.line_user_id, updates);
+      const stopped = userMessage === "__stop_all" ? "すべて"
+        : userMessage === "__stop_weather" ? "天気" : userMessage === "__stop_news" ? "ニュース" : "おすすめ情報";
+      await replyToLine(replyToken, [{ type: "text", text: `「${stopped}」の通知を停止しました。\n再開したい場合はメニューの「通知設定」から変更できます。` }]);
+      continue;
+    }
+
+    // 「通知設定」メニュー表示
+    if (/通知設定|通知追加|通知を追加|通知を受け取/.test(userMessage)) {
+      await replyToLine(replyToken, [{
+        type: "text",
+        text: "受け取りたい通知を選んでください📲\n（不要になったら「配信停止」と送ってください）",
+        quickReply: {
+          items: [
+            { type: "action", action: { type: "message", label: "全部受け取る",   text: "__notify_all" } },
+            { type: "action", action: { type: "message", label: "天気だけ",       text: "__notify_weather" } },
+            { type: "action", action: { type: "message", label: "ニュースだけ",   text: "__notify_news" } },
+            { type: "action", action: { type: "message", label: "おすすめだけ",   text: "__notify_recommend" } },
+            { type: "action", action: { type: "message", label: "すべてオフ",     text: "__notify_none" } },
+          ],
+        },
+      }]);
       continue;
     }
 
