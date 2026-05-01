@@ -5,6 +5,7 @@ import { searchKnowledge } from "@/lib/knowledge-base";
 import { filterVerifiedBusinesses, formatBusinessForPrompt } from "@/lib/verify";
 import { fetchWeatherAlert, fetchNewsAlert } from "@/lib/daily-alerts";
 import { isHotelQuery, buildHotelFlexMessage, HOTEL_ZONE_TIPS } from "@/lib/hotel-affiliate";
+import { isEsimQuery, buildEsimFlexMessage, ESIM_CONTEXT } from "@/lib/esim-affiliate";
 import { detectArea } from "@/lib/knowledge-base";
 
 export const maxDuration = 60;
@@ -598,6 +599,7 @@ export async function POST(request: NextRequest) {
     try {
       const isOmiyage = /お土産|おみやげ/i.test(userMessage) && !/自分用|会社|友達|家族|ローカル|穴場/.test(userMessage);
       const isHotel   = isHotelQuery(userMessage);
+      const isEsim    = isEsimQuery(userMessage) && !isHotel;
 
       // エリア検出（ホテルアフィリ用）
       const detectedAreas = detectArea(userMessage);
@@ -624,6 +626,26 @@ export async function POST(request: NextRequest) {
           ],
         };
         await replyToLine(replyToken, [{ type: "text", text: reply, quickReply }]);
+
+      } else if (isEsim) {
+        // eSIM質問 → Claude回答 ＋ Airalo/Holafly 比較カルーセル
+        const reply = await generateReply(userMessage + ESIM_CONTEXT, user!, history);
+        if (user) {
+          await saveConversation(user.line_user_id, "user", userMessage);
+          await saveConversation(user.line_user_id, "assistant", reply);
+        }
+        const esimCard = buildEsimFlexMessage();
+        const quickReply = {
+          items: [
+            { type: "action", action: { type: "message", label: "設定方法は？",     text: "eSIMの設定方法を教えて" } },
+            { type: "action", action: { type: "message", label: "古いiPhoneでも？", text: "古いiPhoneでもeSIMは使える？" } },
+            { type: "action", action: { type: "message", label: "通話もできる？",   text: "eSIMで通話もできる？" } },
+          ],
+        };
+        await replyToLine(replyToken, [
+          { type: "text", text: reply, quickReply },
+          esimCard,
+        ]);
 
       } else if (isHotel) {
         // ホテル質問 → Claude回答 ＋ Booking.com アフィリFlexカード
