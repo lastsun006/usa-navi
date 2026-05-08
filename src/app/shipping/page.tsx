@@ -453,8 +453,8 @@ export default function ShippingPage() {
             </h2>
             <div>
               <label className={lbl}>ホテル名<span className="text-red-400">*</span></label>
-              <input required className={inp} placeholder="Hilton Anaheim（友人宅の場合は「なし」）" value={hotelName} onChange={e => setHotelName(e.target.value)} />
-              <p className="text-xs text-slate-400 mt-1">ホテル以外（友人宅など）の場合は「なし」と入力してください</p>
+              <input required className={inp} placeholder="Hilton Anaheim" value={hotelName} onChange={e => setHotelName(e.target.value)} />
+              <p className="text-xs text-blue-500 mt-1.5 bg-blue-50 rounded-lg px-3 py-2">💡 友人宅・知人宅に滞在中の場合は「<strong>なし</strong>」と入力してください</p>
             </div>
             <div>
               <label className={lbl}>ホテル住所<span className="text-red-400">*</span></label>
@@ -616,35 +616,42 @@ export default function ShippingPage() {
 
           {/* ── 注意事項・同意 ── */}
           <div className="bg-white rounded-2xl p-5 space-y-3 shadow-sm">
-            <h2 className="font-bold text-slate-700">⚠️ 以下の事項を確認してチェックしてください</h2>
-            <p className="text-xs text-slate-400">全項目のチェックが必要です</p>
+            <h2 className="font-bold text-slate-700">⚠️ 免責事項の確認</h2>
+            <p className="text-xs text-slate-500">全項目を読んでチェックしてください（必須）</p>
 
             {[
               {
                 state: agreedShipping, set: setAgreedShipping,
-                text: "配送会社に引き渡した後の遅延・破損・紛失については一切の責任を負いません。",
+                label: "🚢 配送会社引き渡し後の免責",
+                text: "配送会社に引き渡した後の遅延・破損・紛失については、スタッフは一切の責任を負いません。",
               },
               {
                 state: agreedContents, set: setAgreedContents,
-                text: "発送する商品の内容・申告はすべて送り主（私）の責任です。虚偽申告による損害・罰則についても当社は責任を負いません。",
+                label: "📋 商品内容・申告は送り主の責任",
+                text: "発送する商品の内容・関税申告はすべて送り主（私）の責任です。虚偽申告による損害・罰則もスタッフは責任を負いません。",
               },
               {
                 state: agreedCustoms, set: setAgreedCustoms,
-                text: "通関審査を通過しない場合（差し止め・返送・廃棄）も責任を負いません。関税・通関費用はすべて私の負担です。",
+                label: "🛃 通関不通過の免責",
+                text: "通関審査を通過しない場合（差し止め・返送・廃棄）もスタッフは責任を負いません。関税・通関費用はすべて私の負担です。",
               },
               {
                 state: agreedTerms, set: setAgreedTerms,
-                text: "国際送料は梱包後に実費でご案内されます。トラッキング番号は発送完了後にLINE/メールで受け取ります。",
+                label: "📬 送料・トラッキングについて",
+                text: "国際送料は梱包後に実費でご案内されます。トラッキング番号は発送完了後にLINE/メールで届きます。",
               },
-            ].map(({ state, set, text }, i) => (
-              <label key={i} className={`flex items-start gap-3 cursor-pointer rounded-xl p-3 border transition-all ${state ? "bg-green-50 border-green-300" : "bg-slate-50 border-slate-200"}`}>
+            ].map(({ state, set, label, text }, i) => (
+              <label key={i} className={`flex items-start gap-3 cursor-pointer rounded-xl p-3 border transition-all ${state ? "bg-green-50 border-green-300" : "bg-white border-slate-200"}`}>
                 <input
                   type="checkbox"
                   checked={state}
                   onChange={e => set(e.target.checked)}
                   className="mt-0.5 shrink-0 w-5 h-5 accent-green-600"
                 />
-                <span className="text-sm text-slate-700 leading-relaxed">{text}</span>
+                <div>
+                  <p className="text-sm font-semibold text-slate-700 mb-0.5">{label}</p>
+                  <p className="text-xs text-slate-500 leading-relaxed">{text}</p>
+                </div>
               </label>
             ))}
           </div>
