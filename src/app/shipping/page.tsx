@@ -76,7 +76,10 @@ function Done({ pickupDate, pickupTime, hotelName, itemCount, boxCount }: {
       <div className="bg-white rounded-2xl shadow-sm p-8 max-w-sm w-full text-center space-y-5">
         <div className="text-5xl">✅</div>
         <h2 className="text-xl font-bold text-slate-800">お申し込みありがとうございます</h2>
-        <p className="text-sm text-slate-500">商品内容を確認後、発送可否と料金をご案内します。</p>
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-left space-y-1">
+          <p className="text-sm font-semibold text-blue-700">📱 スタッフよりご連絡します</p>
+          <p className="text-xs text-blue-600">ご入力のメールアドレス宛に、24時間以内に発送可否と料金をご案内します。</p>
+        </div>
 
         <div className="bg-slate-50 rounded-xl p-4 text-left space-y-2 text-sm">
           {[
