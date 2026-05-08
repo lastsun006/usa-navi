@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -126,7 +126,7 @@ function Done({ pickupDate, pickupTime, hotelName, itemCount, boxCount }: {
 }
 
 // ── メインコンポーネント ───────────────────────────────────────────────────────
-export default function ShippingPage() {
+function ShippingForm() {
   const searchParams = useSearchParams();
   const lineUserId = searchParams.get("uid") ?? "";
 
@@ -692,5 +692,13 @@ export default function ShippingPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function ShippingPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center"><p className="text-slate-400">読み込み中...</p></div>}>
+      <ShippingForm />
+    </Suspense>
   );
 }
