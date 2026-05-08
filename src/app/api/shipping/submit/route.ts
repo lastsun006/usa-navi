@@ -123,6 +123,7 @@ export async function POST(request: NextRequest) {
     const addressType = formData.get("address_type") as string;
     const agreedTerms = formData.get("agreed_terms") === "true";
     const estimatedPrice = formData.get("estimated_price") as string;
+    const lineUserId = formData.get("line_user_id") as string;
 
     // LINE admin通知（最初に送る）
     const adminUserId = process.env.LINE_ADMIN_USER_ID;
@@ -154,6 +155,22 @@ TEL：${recipientPhone}
       await pushLineMessage(adminUserId, notification);
     } else {
       console.error("LINE_ADMIN_USER_ID is not set");
+    }
+
+    // ユーザーへLINE確認通知
+    if (lineUserId) {
+      const userNotification = [
+        "📦 発送代行のお申し込みを受け付けました！",
+        "",
+        `集荷日：${pickupDate}（${pickupTime}）`,
+        `ホテル：${hotelName}`,
+        `商品：${itemCount}点 / ${boxCount}箱`,
+        `概算料金：$${estimatedPrice || "要見積もり"}（国際送料別）`,
+        "",
+        "スタッフより24時間以内にご連絡します😊",
+        "ご不明な点はいつでもLINEでどうぞ！",
+      ].join("\n");
+      await pushLineMessage(lineUserId, userNotification);
     }
 
     // DBインサート

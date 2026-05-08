@@ -1948,7 +1948,7 @@ export async function POST(request: NextRequest) {
         ].join("\n"),
         quickReply: {
           items: [
-            { type: "action", action: { type: "uri", label: "🔗 フォームを開く", uri: "https://lasocalconcierge.vercel.app/shipping" } },
+            { type: "action", action: { type: "uri", label: "🔗 フォームを開く", uri: `https://lasocalconcierge.vercel.app/shipping?uid=${userId}` } },
             { type: "action", action: { type: "message", label: "← 戻る", text: "__omiyage_shipping" } },
           ],
         },

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 // ── 定数 ──────────────────────────────────────────────────────────────────────
@@ -31,6 +32,20 @@ function calcPrice(area: string, type: string, boxes: number, items: number, has
   if (!base) return null;
   const extra = Math.max(0, boxes - 1) * 39 + (items >= 20 ? 20 : 0);
   return { base, extra, total: base + extra, hasLarge };
+}
+
+// ── 最短集荷可能日（LA時間で前日20時まで）──────────────────────────────────
+function getMinPickupDate(): string {
+  // LA時間（UTC-7 PDT / UTC-8 PST）を簡易計算
+  const now = new Date();
+  const laOffset = -7 * 60; // PDT（夏時間）
+  const laMs = now.getTime() + (now.getTimezoneOffset() + laOffset) * 60000;
+  const laDate = new Date(laMs);
+  const laHour = laDate.getHours();
+  // 20時以降は翌々日から、20時前は翌日から
+  const addDays = laHour >= 20 ? 2 : 1;
+  const min = new Date(laMs + addDays * 86400000);
+  return min.toISOString().split("T")[0];
 }
 
 // ── 曜日チェック ──────────────────────────────────────────────────────────────
@@ -111,6 +126,9 @@ function Done({ pickupDate, pickupTime, hotelName, itemCount, boxCount }: {
 
 // ── メインコンポーネント ───────────────────────────────────────────────────────
 export default function ShippingPage() {
+  const searchParams = useSearchParams();
+  const lineUserId = searchParams.get("uid") ?? "";
+
   // お客様情報
   const [fullName, setFullName] = useState("");
   const [lineDisplayName, setLineDisplayName] = useState("");
@@ -197,6 +215,7 @@ export default function ShippingPage() {
         recipient_name: recipientName, recipient_phone: recipientPhone, address_type: addressType,
         agreed_terms: "true",
         estimated_price: price ? String(price.total) : "要見積もり",
+        line_user_id: lineUserId,
       };
       Object.entries(fields).forEach(([k, v]) => fd.append(k, v));
       for (let i = 0; i < photos.length; i++) fd.append("photos", photos[i]);
@@ -368,10 +387,12 @@ export default function ShippingPage() {
               <input
                 type="date"
                 required
+                min={getMinPickupDate()}
                 className={inp + (dayWarning ? " border-red-400 bg-red-50" : "")}
                 value={pickupDate}
                 onChange={e => setPickupDate(e.target.value)}
               />
+              <p className="text-xs text-slate-400 mt-1">※ 前日20時（LA時間）までにお申し込みください</p>
               {dayWarning && <p className="mt-1.5 text-xs text-red-500 font-medium">{dayWarning}</p>}
             </div>
 
