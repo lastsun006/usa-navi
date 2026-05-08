@@ -7,12 +7,20 @@ from PIL import Image, ImageDraw, ImageFont
 
 def load_env():
     env = {}
-    with open(os.path.join(os.path.dirname(__file__), "../.env.local")) as f:
-        for line in f:
-            line = line.strip()
-            if "=" in line and not line.startswith("#"):
-                k, v = line.split("=", 1)
-                env[k.strip()] = v.strip()
+    base = os.path.dirname(__file__)
+    for fname in [".env.local", ".env.production"]:
+        fpath = os.path.join(base, "..", fname)
+        if not os.path.exists(fpath):
+            continue
+        with open(fpath) as f:
+            for line in f:
+                line = line.strip()
+                if "=" in line and not line.startswith("#"):
+                    k, v = line.split("=", 1)
+                    key = k.strip()
+                    val = v.strip().strip('"').strip("'")
+                    if key not in env:  # .env.local を優先
+                        env[key] = val
     return env
 
 env = load_env()
@@ -28,15 +36,15 @@ CW, CH = W // COL, H // ROW
 
 # [アイコン文字, メインテキスト, 背景色]
 BUTTONS = [
-    ("LAX",      "空港から市内へ",    "#1A73E8"),
-    ("MLB",      "ドジャース観戦",    "#C41E3A"),
-    ("FOOD",     "グルメ・レストラン", "#E67E22"),
-    ("FAMILY",   "子連れ家族旅行",    "#27AE60"),
-    ("DISNEY",   "ディズニー攻略",    "#8E44AD"),
-    ("SAFETY",   "治安チェック",      "#2C3E50"),
-    ("OMIYAGE",  "お土産ガイド",      "#D35400"),
-    ("SHOP",     "ショッピング",      "#1ABC9C"),
-    ("NOTIFY",   "通知設定",          "#7F8C8D"),
+    ("MOVE",    "移動・行き方",    "#1A73E8"),
+    ("FOOD",    "食事・チップ",    "#E67E22"),
+    ("SPOT",    "人気スポット",    "#8E44AD"),
+    ("HOTEL",   "ホテル案内",      "#27AE60"),
+    ("SAFETY",  "治安チェック",    "#2C3E50"),
+    ("EVENT",   "試合・お得情報",  "#C41E3A"),
+    ("CALL",    "予約代行",        "#16A085"),
+    ("STAFF",   "スタッフ相談",    "#2980B9"),
+    ("OMIYAGE", "お土産代行",      "#D35400"),
 ]
 
 img = Image.new("RGB", (W, H), "#FFFFFF")
@@ -92,15 +100,15 @@ print(f"✅ 画像生成: {out_path}")
 # 2. リッチメニュー作成
 # ──────────────────────────────────────
 ACTIONS = [
-    {"type": "message",  "text": "LAXから市内への行き方を教えて"},
-    {"type": "message",  "text": "ドジャースタジアムの楽しみ方を教えて"},
-    {"type": "message",  "text": "LAのおすすめレストランを教えて"},
-    {"type": "message",  "text": "子連れ家族旅行のアドバイスをして"},
-    {"type": "message",  "text": "ディズニーランドの攻略法を教えて"},
-    {"type": "location"},  # SAFETYボタン → 位置情報ピッカーを直接開く
-    {"type": "message",  "text": "LAのおすすめお土産を教えて"},
-    {"type": "message",  "text": "LAのショッピングスポットを教えて"},
-    {"type": "message",  "text": "通知設定"},
+    {"type": "message",  "text": "移動・行き方"},           # MOVE
+    {"type": "message",  "text": "食事・チップ"},           # FOOD
+    {"type": "message",  "text": "人気スポット"},           # SPOT
+    {"type": "message",  "text": "__hotel_menu"},           # HOTEL
+    {"type": "location"},                                   # SAFETY → 位置情報ピッカー
+    {"type": "message",  "text": "試合・お得情報"},         # INFO
+    {"type": "message",  "text": "予約代行"},               # RESERVE
+    {"type": "message",  "text": "スタッフに相談"},         # STAFF
+    {"type": "message",  "text": "お土産代行"},             # OMIYAGE
 ]
 
 areas = []

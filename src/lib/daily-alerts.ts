@@ -32,10 +32,15 @@ export async function fetchWeatherAlert(): Promise<Alert> {
       const maxTemp  = data.daily.temperature_2m_max[1] as number;
       const wcode    = data.daily.weathercode[1] as number;
 
-      const isRainy = precipMm > 1 || (wcode >= 51 && wcode <= 67) || (wcode >= 80 && wcode <= 82) || wcode >= 95;
+      const rainByCode = (wcode >= 51 && wcode <= 67) || (wcode >= 80 && wcode <= 82) || wcode >= 95;
       const isHot   = maxTemp >= 35;
 
-      if (isRainy) alerts.push(`🌧️ ${city.name}：明日は雨の予報（${precipMm.toFixed(0)}mm）。屋外観光は午前中がおすすめ。`);
+      if (precipMm > 1) {
+        alerts.push(`🌧️ ${city.name}：明日は雨の予報（${precipMm.toFixed(0)}mm）。屋外観光は午前中がおすすめ。`);
+      } else if (rainByCode) {
+        // 降水量はわずかだが天気コードが雨系 → にわか雨の可能性として案内
+        alerts.push(`🌦️ ${city.name}：明日はにわか雨の可能性あり。念のため折りたたみ傘をお持ちください。`);
+      }
       if (isHot)   alerts.push(`🌡️ ${city.name}：明日は${Math.round(maxTemp)}℃予報。水分・日焼け止め必須！`);
     } catch { /* 個別エラーは無視 */ }
   }

@@ -17,6 +17,13 @@ export interface UserProfile {
   notify_weather: boolean;
   notify_news: boolean;
   notify_recommend: boolean;
+  call_credits: number;
+  pending_action: string | null;
+  last_lat: number | null;
+  last_lng: number | null;
+  memory_spots: string | null;
+  memory_food: string | null;
+  memory_companions: string | null;
 }
 
 // ユーザー取得（なければ作成）
@@ -83,4 +90,90 @@ export async function getRecentConversations(lineUserId: string): Promise<Conver
   if (!data) return [];
   // 古い順に並び替えてから返す
   return data.reverse().map(d => ({ role: d.role, content: d.content }));
+}
+
+// ──────────────────────────────────────
+// 電話代行（calls テーブル）
+// ──────────────────────────────────────
+
+export interface CallRecord {
+  id: string;
+  user_id: string;
+  call_id: string | null;
+  restaurant: string | null;
+  phone: string | null;
+  status: "collecting" | "confirming" | "calling" | "completed" | "failed" | "cancelled" | "admin_combo" | "admin_credits" | "pending_retry" | "awaiting_retry" | "scheduling" | "scheduled" | "awaiting_rebook";
+  result: string | null;
+  created_at: string;
+}
+
+// 保留中の通話を保存
+export async function savePendingCall(userId: string, data: Partial<CallRecord>): Promise<string> {
+  const { data: row, error } = await supabase
+    .from("calls")
+    .insert({ user_id: userId, ...data })
+    .select()
+    .single();
+  if (error) throw error;
+  return row.id;
+}
+
+// ユーザーの保留中通話を取得（最新1件）
+export async function getPendingCall(userId: string): Promise<CallRecord | null> {
+  const { data } = await supabase
+    .from("calls")
+    .select("*")
+    .eq("user_id", userId)
+    .in("status", ["collecting", "confirming", "scheduling", "admin_combo", "admin_credits"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+  return data ?? null;
+}
+
+// 通話レコードをIDで取得
+export async function getCallById(id: string): Promise<CallRecord | null> {
+  const { data } = await supabase
+    .from("calls")
+    .select("*")
+    .eq("id", id)
+    .single();
+  return data ?? null;
+}
+
+// call_idで通話レコードを取得（Bland.aiからのwebhook用）
+export async function getCallByBlandId(blandCallId: string): Promise<CallRecord | null> {
+  const { data } = await supabase
+    .from("calls")
+    .select("*")
+    .eq("call_id", blandCallId)
+    .single();
+  return data ?? null;
+}
+
+// リトライ待ちの通話を全件取得
+export async function getPendingRetries(): Promise<CallRecord[]> {
+  const { data } = await supabase
+    .from("calls")
+    .select("*")
+    .eq("status", "pending_retry");
+  return data ?? [];
+}
+
+// スケジュール済みの通話を全件取得
+export async function getScheduledCalls(): Promise<CallRecord[]> {
+  const { data } = await supabase
+    .from("calls")
+    .select("*")
+    .eq("status", "scheduled");
+  return data ?? [];
+}
+
+// 通話レコードを更新
+export async function updateCall(id: string, updates: Partial<CallRecord>) {
+  const { error } = await supabase
+    .from("calls")
+    .update(updates)
+    .eq("id", id);
+  if (error) throw error;
 }
