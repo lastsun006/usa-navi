@@ -164,6 +164,9 @@ export default function ShippingPage() {
   const [addressType, setAddressType] = useState("");
   // その他
   const [agreedTerms, setAgreedTerms] = useState(false);
+  const [agreedShipping, setAgreedShipping] = useState(false);
+  const [agreedContents, setAgreedContents] = useState(false);
+  const [agreedCustoms, setAgreedCustoms] = useState(false);
   const [slotCounts, setSlotCounts] = useState<Record<string, number>>({});
   const [dayWarning, setDayWarning] = useState("");
   const [status, setStatus] = useState<"idle" | "submitting" | "done" | "error">("idle");
@@ -198,7 +201,7 @@ export default function ShippingPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!agreedTerms) { setErrorMsg("注意事項への同意が必要です"); return; }
+    if (!agreedTerms || !agreedShipping || !agreedContents || !agreedCustoms) { setErrorMsg("すべての同意事項にチェックを入れてください"); return; }
     if (!photos || photos.length === 0) { setErrorMsg("商品写真を1枚以上アップロードしてください"); return; }
     if (dayWarning) { setErrorMsg("集荷日の曜日をご確認ください"); return; }
     if (!hasFood || !hasLiquid || !hasFragile || !hasLarge) { setErrorMsg("商品情報の「あり/なし」をすべて選択してください"); return; }
@@ -612,30 +615,38 @@ export default function ShippingPage() {
           </div>
 
           {/* ── 注意事項・同意 ── */}
-          <div className="bg-white rounded-2xl p-5 space-y-4 shadow-sm">
-            <h2 className="font-bold text-slate-700">⚠️ 注意事項・免責事項</h2>
-            <div className="text-xs text-slate-500 space-y-2.5 leading-relaxed">
-              <div className="flex gap-2"><span className="shrink-0">📦</span><p>ダンボールをご自身でご用意の場合、仮止め程度でOKです。スタッフが中身を確認してから梱包します。</p></div>
-              <div className="flex gap-2"><span className="shrink-0">📦</span><p>ダンボールをスタッフが用意する場合、梱包代として1箱につき$5が加算されます。</p></div>
-              <div className="flex gap-2"><span className="shrink-0">🚢</span><p><strong className="text-slate-600">配送会社に引き渡し後の遅延・破損・紛失・盗難については一切の責任を負いかねます。</strong></p></div>
-              <div className="flex gap-2"><span className="shrink-0">📋</span><p><strong className="text-slate-600">商品の内容・申告については送り主（お客様）の責任となります。</strong>虚偽申告による損害・罰則についても当社は責任を負いません。</p></div>
-              <div className="flex gap-2"><span className="shrink-0">🛃</span><p><strong className="text-slate-600">通関審査を通過しない場合（差し止め・返送・廃棄）についても責任を負いかねます。</strong>関税・消費税・通関手数料はお客様負担です。</p></div>
-              <div className="flex gap-2"><span className="shrink-0">📬</span><p>トラッキング番号は発送完了後にLINEまたはメールでお知らせします。</p></div>
-              <div className="flex gap-2"><span className="shrink-0">🚫</span><p>発送できない商品があります（危険物・生鮮食品など）。商品確認後に発送可否をご案内します。</p></div>
-              <div className="flex gap-2"><span className="shrink-0">💰</span><p>2箱目以降は1箱につき+$39。20点以上の商品は+$20の作業料が発生します。</p></div>
-            </div>
-            <label className="flex items-start gap-3 cursor-pointer bg-amber-50 border border-amber-200 rounded-xl p-3">
-              <input
-                type="checkbox"
-                required
-                checked={agreedTerms}
-                onChange={e => setAgreedTerms(e.target.checked)}
-                className="mt-0.5 shrink-0 w-5 h-5 rounded accent-blue-600"
-              />
-              <span className="text-sm font-medium text-slate-700">
-                上記の注意事項・免責事項をすべて確認し、同意します<span className="text-red-400">*</span>
-              </span>
-            </label>
+          <div className="bg-white rounded-2xl p-5 space-y-3 shadow-sm">
+            <h2 className="font-bold text-slate-700">⚠️ 以下の事項を確認してチェックしてください</h2>
+            <p className="text-xs text-slate-400">全項目のチェックが必要です</p>
+
+            {[
+              {
+                state: agreedShipping, set: setAgreedShipping,
+                text: "配送会社に引き渡した後の遅延・破損・紛失については一切の責任を負いません。",
+              },
+              {
+                state: agreedContents, set: setAgreedContents,
+                text: "発送する商品の内容・申告はすべて送り主（私）の責任です。虚偽申告による損害・罰則についても当社は責任を負いません。",
+              },
+              {
+                state: agreedCustoms, set: setAgreedCustoms,
+                text: "通関審査を通過しない場合（差し止め・返送・廃棄）も責任を負いません。関税・通関費用はすべて私の負担です。",
+              },
+              {
+                state: agreedTerms, set: setAgreedTerms,
+                text: "国際送料は梱包後に実費でご案内されます。トラッキング番号は発送完了後にLINE/メールで受け取ります。",
+              },
+            ].map(({ state, set, text }, i) => (
+              <label key={i} className={`flex items-start gap-3 cursor-pointer rounded-xl p-3 border transition-all ${state ? "bg-green-50 border-green-300" : "bg-slate-50 border-slate-200"}`}>
+                <input
+                  type="checkbox"
+                  checked={state}
+                  onChange={e => set(e.target.checked)}
+                  className="mt-0.5 shrink-0 w-5 h-5 accent-green-600"
+                />
+                <span className="text-sm text-slate-700 leading-relaxed">{text}</span>
+              </label>
+            ))}
           </div>
 
           {/* エラー */}
