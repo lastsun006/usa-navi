@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 // shipping_bookings
 // CREATE TABLE shipping_bookings (
 //   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,

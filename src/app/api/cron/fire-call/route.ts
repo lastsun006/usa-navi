@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { getCallById, updateCall } from "@/lib/supabase";
 import { makeReservationCall, ReservationRequest } from "@/lib/bland-caller";
