@@ -124,6 +124,38 @@ export async function POST(request: NextRequest) {
     const agreedTerms = formData.get("agreed_terms") === "true";
     const estimatedPrice = formData.get("estimated_price") as string;
 
+    // LINE admin通知（最初に送る）
+    const adminUserId = process.env.LINE_ADMIN_USER_ID;
+    if (adminUserId) {
+      const notification = `📦 新規発送代行申し込み
+
+👤 ${fullName}（LINE: ${lineDisplayName || "未記入"}）
+📧 ${email}
+📞 ${phone}
+
+📍 エリア：${area} / ${pickupType}
+📅 集荷日：${pickupDate} ${pickupTime}
+🏨 ホテル：${hotelName} ${roomNumber ? `（${roomNumber}号室）` : ""}
+　住所：${hotelAddress}
+　チェックアウト：${checkoutDate}
+
+📦 商品：${itemCount}点 / ${boxCount}箱
+💰 購入金額：${purchaseAmount || "未記入"}
+食品:${hasFood ? "あり" : "なし"} 液体:${hasLiquid ? "あり" : "なし"} 壊れ物:${hasFragile ? "あり" : "なし"} 大型:${hasLarge ? "あり" : "なし"}
+${itemNotes ? `備考：${itemNotes}` : ""}
+
+📮 日本の送り先（${addressType}）
+〒${destZip} ${destAddress}
+受取人：${recipientName}
+TEL：${recipientPhone}
+
+💵 概算：$${estimatedPrice || "要見積もり"} + 国際送料`;
+
+      await pushLineMessage(adminUserId, notification);
+    } else {
+      console.error("LINE_ADMIN_USER_ID is not set");
+    }
+
     // DBインサート
     const { error: insertError } = await supabase.from("shipping_bookings").insert({
       full_name: fullName,
@@ -157,31 +189,8 @@ export async function POST(request: NextRequest) {
       status: "pending",
     });
 
-    if (insertError) throw insertError;
-
-    // LINE admin通知
-    const adminUserId = process.env.LINE_ADMIN_USER_ID;
-    if (adminUserId) {
-      const notification = `📦 新規発送代行申し込み
-
-👤 ${fullName}（LINE: ${lineDisplayName || "未記入"}）
-📧 ${email} / 📞 ${phone}
-
-📍 エリア：${area} / ${pickupType}
-📅 集荷日：${pickupDate} ${pickupTime}
-🏨 ${hotelName} ${roomNumber || ""}
-　　${hotelAddress}
-
-📦 商品：${itemCount}点 / ${boxCount}箱
-💰 購入金額：${purchaseAmount || "未記入"}
-⚠️ 食品:${hasFood ? "あり" : "なし"} 液体:${hasLiquid ? "あり" : "なし"} 壊れ物:${hasFragile ? "あり" : "なし"} 大型:${hasLarge ? "あり" : "なし"}
-
-📮 送り先：${destZip} ${destAddress}
-　　${recipientName} ${recipientPhone}（${addressType}）
-
-💵 概算：$${estimatedPrice} + 国際送料`;
-
-      await pushLineMessage(adminUserId, notification);
+    if (insertError) {
+      console.error("DB insert error:", insertError);
     }
 
     return NextResponse.json({ ok: true });
