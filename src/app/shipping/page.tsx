@@ -26,12 +26,13 @@ const DAY_LABEL: Record<string, string> = {
 };
 
 // ── 料金計算 ──────────────────────────────────────────────────────────────────
-function calcPrice(area: string, type: string, boxes: number, items: number, hasLarge: boolean) {
+function calcPrice(area: string, type: string, boxes: number, items: number, hasLarge: boolean, hasOwnBox: string) {
   const key = `${area}-${type === "指定日集荷" ? "指定日" : "日時指定"}` as keyof typeof PRICE;
   const base = PRICE[key];
   if (!base) return null;
-  const extra = Math.max(0, boxes - 1) * 39 + (items >= 20 ? 20 : 0);
-  return { base, extra, total: base + extra, hasLarge };
+  const boxPrep = hasOwnBox === "no" ? boxes * 5 : 0;
+  const extra = Math.max(0, boxes - 1) * 39 + (items >= 20 ? 20 : 0) + boxPrep;
+  return { base, extra, total: base + extra, hasLarge, boxPrep };
 }
 
 // ── 最短集荷可能日（LA時間で前日20時まで）──────────────────────────────────
@@ -153,6 +154,7 @@ export default function ShippingPage() {
   const [hasLiquid, setHasLiquid] = useState("");
   const [hasFragile, setHasFragile] = useState("");
   const [hasLarge, setHasLarge] = useState("");
+  const [hasOwnBox, setHasOwnBox] = useState("");
   const [itemNotes, setItemNotes] = useState("");
   // 送り先
   const [destZip, setDestZip] = useState("");
@@ -191,7 +193,7 @@ export default function ShippingPage() {
 
   // 料金計算
   const price = area && pickupType
-    ? calcPrice(area, pickupType, parseInt(boxCount) || 1, parseInt(itemCount) || 0, hasLarge === "yes")
+    ? calcPrice(area, pickupType, parseInt(boxCount) || 1, parseInt(itemCount) || 0, hasLarge === "yes", hasOwnBox)
     : null;
 
   async function handleSubmit(e: React.FormEvent) {
@@ -200,6 +202,7 @@ export default function ShippingPage() {
     if (!photos || photos.length === 0) { setErrorMsg("商品写真を1枚以上アップロードしてください"); return; }
     if (dayWarning) { setErrorMsg("集荷日の曜日をご確認ください"); return; }
     if (!hasFood || !hasLiquid || !hasFragile || !hasLarge) { setErrorMsg("商品情報の「あり/なし」をすべて選択してください"); return; }
+    if (!hasOwnBox) { setErrorMsg("ダンボールの準備について選択してください"); return; }
 
     setStatus("submitting");
     setErrorMsg("");
@@ -211,6 +214,7 @@ export default function ShippingPage() {
         hotel_name: hotelName, hotel_address: hotelAddress, room_number: roomNumber, checkout_date: checkoutDate,
         item_count: itemCount, box_count: boxCount, purchase_amount: purchaseAmount,
         has_food: hasFood, has_liquid: hasLiquid, has_fragile: hasFragile, has_large: hasLarge,
+        has_own_box: hasOwnBox,
         item_notes: itemNotes, dest_zip: destZip, dest_address: destAddress,
         recipient_name: recipientName, recipient_phone: recipientPhone, address_type: addressType,
         agreed_terms: "true",
@@ -282,6 +286,7 @@ export default function ShippingPage() {
               <p className="text-2xl font-bold text-green-700">${price.total}</p>
               {price.hasLarge && <p className="text-xs text-orange-500">+ 大型商品 要見積もり</p>}
               {price.extra > 0 && <p className="text-xs text-slate-400">（追加料金 +${price.extra} 含む）</p>}
+              {price.boxPrep > 0 && <p className="text-xs text-blue-500">梱包代 +${price.boxPrep} 含む</p>}
             </div>
             <div className="text-right text-xs text-slate-400">
               <p>+ 国際送料</p>
@@ -514,6 +519,25 @@ export default function ShippingPage() {
               <input className={inp} placeholder="例：$300" value={purchaseAmount} onChange={e => setPurchaseAmount(e.target.value)} />
             </div>
 
+            {/* ダンボール準備 */}
+            <div className="bg-slate-50 rounded-xl p-4 space-y-3">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">ダンボールの準備<span className="text-red-400">*</span></p>
+              <div className="space-y-2">
+                {[
+                  { val: "yes", label: "自分で用意する", desc: "仮止め程度でOKです。スタッフが中身を確認します" },
+                  { val: "no",  label: "スタッフに用意してもらう", desc: `+$5 / 箱（${parseInt(boxCount)||1}箱 = +$${(parseInt(boxCount)||1)*5}）` },
+                ].map(({ val, label, desc }) => (
+                  <label key={val} className={`flex items-start gap-3 border rounded-xl p-3 cursor-pointer transition-all ${hasOwnBox === val ? "border-blue-400 bg-blue-50" : "border-slate-200"}`}>
+                    <input type="radio" name="has_own_box" value={val} checked={hasOwnBox === val} onChange={() => setHasOwnBox(val)} className="mt-0.5 shrink-0" />
+                    <div>
+                      <div className="text-sm font-medium">{label}</div>
+                      <div className="text-xs text-slate-400">{desc}</div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
             {/* あり/なし セクション */}
             <div className="bg-slate-50 rounded-xl p-4 space-y-3">
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">商品内容の確認<span className="text-red-400">*</span></p>
@@ -589,15 +613,18 @@ export default function ShippingPage() {
 
           {/* ── 注意事項・同意 ── */}
           <div className="bg-white rounded-2xl p-5 space-y-4 shadow-sm">
-            <h2 className="font-bold text-slate-700">⚠️ 注意事項</h2>
-            <div className="text-xs text-slate-500 space-y-2 leading-relaxed">
-              <p>・国際送料・関税・消費税・通関上の追加費用はお客様負担です</p>
-              <p>・発送できない商品があります。商品確認後に発送可否をご案内します</p>
-              <p>・商品点数が20点以上の場合、追加作業料が発生する場合があります</p>
-              <p>・追加箱が必要な場合、1箱につき+$39となります</p>
-              <p>・配送中の遅延、破損、紛失、税関での開封・差し止めについては配送会社・税関の判断となります</p>
+            <h2 className="font-bold text-slate-700">⚠️ 注意事項・免責事項</h2>
+            <div className="text-xs text-slate-500 space-y-2.5 leading-relaxed">
+              <div className="flex gap-2"><span className="shrink-0">📦</span><p>ダンボールをご自身でご用意の場合、仮止め程度でOKです。スタッフが中身を確認してから梱包します。</p></div>
+              <div className="flex gap-2"><span className="shrink-0">📦</span><p>ダンボールをスタッフが用意する場合、梱包代として1箱につき$5が加算されます。</p></div>
+              <div className="flex gap-2"><span className="shrink-0">🚢</span><p><strong className="text-slate-600">配送会社に引き渡し後の遅延・破損・紛失・盗難については一切の責任を負いかねます。</strong></p></div>
+              <div className="flex gap-2"><span className="shrink-0">📋</span><p><strong className="text-slate-600">商品の内容・申告については送り主（お客様）の責任となります。</strong>虚偽申告による損害・罰則についても当社は責任を負いません。</p></div>
+              <div className="flex gap-2"><span className="shrink-0">🛃</span><p><strong className="text-slate-600">通関審査を通過しない場合（差し止め・返送・廃棄）についても責任を負いかねます。</strong>関税・消費税・通関手数料はお客様負担です。</p></div>
+              <div className="flex gap-2"><span className="shrink-0">📬</span><p>トラッキング番号は発送完了後にLINEまたはメールでお知らせします。</p></div>
+              <div className="flex gap-2"><span className="shrink-0">🚫</span><p>発送できない商品があります（危険物・生鮮食品など）。商品確認後に発送可否をご案内します。</p></div>
+              <div className="flex gap-2"><span className="shrink-0">💰</span><p>2箱目以降は1箱につき+$39。20点以上の商品は+$20の作業料が発生します。</p></div>
             </div>
-            <label className="flex items-start gap-3 cursor-pointer bg-slate-50 rounded-xl p-3">
+            <label className="flex items-start gap-3 cursor-pointer bg-amber-50 border border-amber-200 rounded-xl p-3">
               <input
                 type="checkbox"
                 required
@@ -606,7 +633,7 @@ export default function ShippingPage() {
                 className="mt-0.5 shrink-0 w-5 h-5 rounded accent-blue-600"
               />
               <span className="text-sm font-medium text-slate-700">
-                上記の注意事項を確認し、同意します<span className="text-red-400">*</span>
+                上記の注意事項・免責事項をすべて確認し、同意します<span className="text-red-400">*</span>
               </span>
             </label>
           </div>
