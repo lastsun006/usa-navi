@@ -417,11 +417,12 @@ export default function ShippingPage() {
           <div className="bg-white rounded-2xl p-5 space-y-4 shadow-sm">
             <h2 className="font-bold text-slate-700 flex items-center gap-2">
               <span className="bg-blue-600 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center">3</span>
-              ホテル情報
+              集荷先情報
             </h2>
             <div>
               <label className={lbl}>ホテル名<span className="text-red-400">*</span></label>
-              <input required className={inp} placeholder="Hilton Anaheim" value={hotelName} onChange={e => setHotelName(e.target.value)} />
+              <input required className={inp} placeholder="Hilton Anaheim（友人宅の場合は「なし」）" value={hotelName} onChange={e => setHotelName(e.target.value)} />
+              <p className="text-xs text-slate-400 mt-1">ホテル以外（友人宅など）の場合は「なし」と入力してください</p>
             </div>
             <div>
               <label className={lbl}>ホテル住所<span className="text-red-400">*</span></label>
