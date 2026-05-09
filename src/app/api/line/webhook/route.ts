@@ -731,7 +731,7 @@ export async function POST(request: NextRequest) {
           type: "text",
           text: [
             "ご登録ありがとうございます🌴",
-            "SoCal Naviです。",
+            "LA&Socalコンシェルジュです。",
             "",
             "LA・南カリフォルニア旅行中の",
             "「これどうしたらいい？」を日本語で相談できます。",
