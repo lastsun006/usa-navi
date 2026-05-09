@@ -721,39 +721,37 @@ export async function POST(request: NextRequest) {
         }
       } catch (_) { /* プロフィール取得失敗時は名前なしで続行 */ }
 
-      // まだオンボーディングしていない場合のみ
-      if (!user.onboarding_done && user.onboarding_step === 0) {
-        await updateUser(lineUserId, { onboarding_step: 1 });
+      // 友達追加 or 再登録のたびにウェルカムを送る（onboarding リセット）
+      await updateUser(lineUserId, { onboarding_step: 1, onboarding_done: false });
 
-        const namePrefix = displayName ? `${displayName}さん\n` : "";
+      const namePrefix = displayName ? `${displayName}さん\n` : "";
 
-        await replyToLine(replyToken, [
-          {
-            type: "text",
-            text: [
-              `${namePrefix}はじめまして！LA&Socal コンシェルジュです。`,
-              "友だち追加ありがとうございます🌙",
-              "",
-              "このアカウントでは、最新情報を定期的に配信していきます💌",
-              "どうぞお楽しみに🎁✨",
-            ].join("\n"),
+      await replyToLine(replyToken, [
+        {
+          type: "text",
+          text: [
+            `${namePrefix}はじめまして！LA&Socal コンシェルジュです。`,
+            "友だち追加ありがとうございます🌙",
+            "",
+            "このアカウントでは、最新情報を定期的に配信していきます💌",
+            "どうぞお楽しみに🎁✨",
+          ].join("\n"),
+        },
+        {
+          type: "text",
+          text: "まず旅のスタイルに合わせたご案内のために、年齢を教えてもらえますか？",
+          quickReply: {
+            items: [
+              { type: "action", action: { type: "message", label: "10代以下",  text: "__age_10代以下" } },
+              { type: "action", action: { type: "message", label: "20代",      text: "__age_20代" } },
+              { type: "action", action: { type: "message", label: "30代",      text: "__age_30代" } },
+              { type: "action", action: { type: "message", label: "40代",      text: "__age_40代" } },
+              { type: "action", action: { type: "message", label: "50代以上",  text: "__age_50代以上" } },
+              { type: "action", action: { type: "message", label: "答えない",  text: "__age_skip" } },
+            ],
           },
-          {
-            type: "text",
-            text: "まず旅のスタイルに合わせたご案内のために、年齢を教えてもらえますか？",
-            quickReply: {
-              items: [
-                { type: "action", action: { type: "message", label: "10代以下",  text: "__age_10代以下" } },
-                { type: "action", action: { type: "message", label: "20代",      text: "__age_20代" } },
-                { type: "action", action: { type: "message", label: "30代",      text: "__age_30代" } },
-                { type: "action", action: { type: "message", label: "40代",      text: "__age_40代" } },
-                { type: "action", action: { type: "message", label: "50代以上",  text: "__age_50代以上" } },
-                { type: "action", action: { type: "message", label: "答えない",  text: "__age_skip" } },
-              ],
-            },
-          },
-        ]);
-      }
+        },
+      ]);
       continue;
     }
 
