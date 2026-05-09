@@ -700,6 +700,48 @@ export async function POST(request: NextRequest) {
   const data = JSON.parse(body);
 
   for (const event of data.events ?? []) {
+
+    // 👋 友達追加 → ウェルカム＋オンボーディング開始
+    if (event.type === "follow") {
+      const lineUserId = event.source?.userId;
+      const replyToken = event.replyToken;
+      if (!lineUserId) continue;
+
+      const user = await getOrCreateUser(lineUserId);
+
+      // まだオンボーディングしていない場合のみ
+      if (!user.onboarding_done && user.onboarding_step === 0) {
+        await updateUser(lineUserId, { onboarding_step: 1 });
+        await replyToLine(replyToken, [{
+          type: "text",
+          text: [
+            "はじめまして！SoCal Navi です🇺🇸✨",
+            "",
+            "南カリフォルニア旅行中に役立つ情報をLINEでお届けします。",
+            "・移動・交通案内",
+            "・レストラン・チップ",
+            "・治安チェック（位置情報で即判断）",
+            "・写真を送るだけでAI分析",
+            "・発送代行サービス",
+            "",
+            "より良いご案内のために、いくつか教えてください👇",
+            "まず、年齢を教えてください。",
+          ].join("\n"),
+          quickReply: {
+            items: [
+              { type: "action", action: { type: "message", label: "10代以下",  text: "__age_10代以下" } },
+              { type: "action", action: { type: "message", label: "20代",      text: "__age_20代" } },
+              { type: "action", action: { type: "message", label: "30代",      text: "__age_30代" } },
+              { type: "action", action: { type: "message", label: "40代",      text: "__age_40代" } },
+              { type: "action", action: { type: "message", label: "50代以上",  text: "__age_50代以上" } },
+              { type: "action", action: { type: "message", label: "答えない",  text: "__age_skip" } },
+            ],
+          },
+        }]);
+      }
+      continue;
+    }
+
     if (event.type !== "message") continue;
 
     const replyToken = event.replyToken;
