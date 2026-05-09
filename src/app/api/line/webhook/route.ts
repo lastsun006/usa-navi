@@ -709,39 +709,50 @@ export async function POST(request: NextRequest) {
 
       const user = await getOrCreateUser(lineUserId);
 
+      // LINEプロフィールから表示名を取得
+      let displayName = "";
+      try {
+        const profileRes = await fetch(`https://api.line.me/v2/bot/profile/${lineUserId}`, {
+          headers: { Authorization: `Bearer ${process.env.LINE_CHANNEL_ACCESS_TOKEN}` },
+        });
+        if (profileRes.ok) {
+          const profile = await profileRes.json();
+          displayName = profile.displayName ?? "";
+        }
+      } catch (_) { /* プロフィール取得失敗時は名前なしで続行 */ }
+
       // まだオンボーディングしていない場合のみ
       if (!user.onboarding_done && user.onboarding_step === 0) {
         await updateUser(lineUserId, { onboarding_step: 1 });
-        await replyToLine(replyToken, [{
-          type: "text",
-          text: [
-            "ご登録ありがとうございます🌴",
-            "SoCal Naviです。",
-            "",
-            "LA・南カリフォルニア旅行中の",
-            "「これどうしたらいい？」を日本語で相談できます。",
-            "",
-            "移動・治安・ホテル・食事・チップ・トイレ・写真チェックなど、現地で困った時にそのまま聞いてください。",
-            "",
-            "また、必要に応じて",
-            "予約代行・お土産の購入代行・日本への発送代行・スタッフ相談もご利用いただけます🎁",
-            "",
-            "下のメニューを選ぶか、",
-            "そのまま日本語で質問してください📩",
-            "",
-            "まず旅のスタイルに合わせたご案内のために、年齢を教えてもらえますか？",
-          ].join("\n"),
-          quickReply: {
-            items: [
-              { type: "action", action: { type: "message", label: "10代以下",  text: "__age_10代以下" } },
-              { type: "action", action: { type: "message", label: "20代",      text: "__age_20代" } },
-              { type: "action", action: { type: "message", label: "30代",      text: "__age_30代" } },
-              { type: "action", action: { type: "message", label: "40代",      text: "__age_40代" } },
-              { type: "action", action: { type: "message", label: "50代以上",  text: "__age_50代以上" } },
-              { type: "action", action: { type: "message", label: "答えない",  text: "__age_skip" } },
-            ],
+
+        const namePrefix = displayName ? `${displayName}さん\n` : "";
+
+        await replyToLine(replyToken, [
+          {
+            type: "text",
+            text: [
+              `${namePrefix}はじめまして！LA&Socal コンシェルジュです。`,
+              "友だち追加ありがとうございます🌙",
+              "",
+              "このアカウントでは、最新情報を定期的に配信していきます💌",
+              "どうぞお楽しみに🎁✨",
+            ].join("\n"),
           },
-        }]);
+          {
+            type: "text",
+            text: "まず旅のスタイルに合わせたご案内のために、年齢を教えてもらえますか？",
+            quickReply: {
+              items: [
+                { type: "action", action: { type: "message", label: "10代以下",  text: "__age_10代以下" } },
+                { type: "action", action: { type: "message", label: "20代",      text: "__age_20代" } },
+                { type: "action", action: { type: "message", label: "30代",      text: "__age_30代" } },
+                { type: "action", action: { type: "message", label: "40代",      text: "__age_40代" } },
+                { type: "action", action: { type: "message", label: "50代以上",  text: "__age_50代以上" } },
+                { type: "action", action: { type: "message", label: "答えない",  text: "__age_skip" } },
+              ],
+            },
+          },
+        ]);
       }
       continue;
     }
