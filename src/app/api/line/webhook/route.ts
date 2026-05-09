@@ -879,6 +879,72 @@ export async function POST(request: NextRequest) {
       continue;
     }
 
+    // 🖼️ 画像メッセージ → Vision分析
+    if (event.message.type === "image") {
+      const messageId = event.message.id;
+      try {
+        // LINE から画像バイナリを取得
+        const imgRes = await fetch(`https://api-data.line.me/v2/bot/message/${messageId}/content`, {
+          headers: { Authorization: `Bearer ${process.env.LINE_CHANNEL_ACCESS_TOKEN}` },
+        });
+        if (!imgRes.ok) throw new Error(`画像取得失敗: ${imgRes.status}`);
+        const imgBuffer = await imgRes.arrayBuffer();
+        const base64 = Buffer.from(imgBuffer).toString("base64");
+        const mimeType = imgRes.headers.get("content-type") || "image/jpeg";
+
+        // Claude Vision で分析
+        const Anthropic = (await import("@anthropic-ai/sdk")).default;
+        const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+        const visionRes = await anthropic.messages.create({
+          model: "claude-opus-4-5",
+          max_tokens: 1024,
+          messages: [{
+            role: "user",
+            content: [
+              {
+                type: "image",
+                source: { type: "base64", media_type: mimeType as "image/jpeg" | "image/png" | "image/gif" | "image/webp", data: base64 },
+              },
+              {
+                type: "text",
+                text: `あなたはアメリカ（南カリフォルニア）を旅行中の日本人をサポートするAIアシスタントです。
+送られてきた画像を見て、以下の観点から日本語で丁寧に答えてください。
+
+画像の内容によって適切に判断：
+- 標識・看板 → 意味を説明し、駐車OKかNGか、注意事項を教える
+- レシート・請求書 → チップが含まれているか確認し、相場かどうか判断する
+- 食品・商品 → 日本に持ち帰れるか（税関・検疫のルール）を教える
+- メニュー → おすすめ料理や注意点（アレルギー等）を教える
+- 英語テキスト → 日本語に翻訳して意味を説明する
+- 街並み・エリア → 雰囲気・安全性について教える
+- その他 → 旅行者に役立つ情報を提供する
+
+回答は300文字以内で簡潔に、絵文字を使って読みやすくしてください。`,
+              },
+            ],
+          }],
+        });
+
+        const answer = visionRes.content[0].type === "text" ? visionRes.content[0].text : "画像を解析できませんでした。";
+
+        await replyToLine(replyToken, [{
+          type: "text",
+          text: answer,
+          quickReply: {
+            items: [
+              { type: "action", action: { type: "message", label: "📸 別の写真を分析", text: "写真を送る" } },
+              { type: "action", action: { type: "message", label: "🏠 メニューへ", text: "メニュー" } },
+            ],
+          },
+        }]);
+      } catch (e) {
+        console.error("画像分析エラー:", e);
+        await replyToLine(replyToken, [{ type: "text", text: "📸 画像の分析中にエラーが発生しました。もう一度お試しください。" }]);
+      }
+      continue;
+    }
+
     // 💬 テキストメッセージ
     if (event.message.type !== "text") continue;
     const userMessage = event.message.text;
