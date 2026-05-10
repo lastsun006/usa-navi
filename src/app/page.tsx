@@ -176,6 +176,7 @@ export default function Home() {
               { num: "04", title: "英語での電話・予約が不安", desc: "レストランの予約、空席確認、在庫確認——英語電話が必要なシーンで止まってしまう。" },
               { num: "05", title: "お土産買い回りが大変", desc: "トレジョ、Costco、CVS——どこで何を買えばいいか分からず時間を浪費する。" },
               { num: "06", title: "職場のばらまき土産が悩みの種", desc: "人数分、個包装、喜ばれるもの——毎回悩んで時間と体力を消耗する。" },
+              { num: "07", title: "帰りの荷物がスーツケースに入りきらない", desc: "買い物が増えると荷物もかさばる。超過料金か断念か——毎回悩む問題。" },
             ].map((p) => (
               <li key={p.num} className="border border-black/8 rounded-2xl p-5 bg-white flex items-start gap-4">
                 <span className="font-en font-bold text-[#F59E0B] bg-[#F59E0B]/10 text-[13px] rounded-lg w-8 h-8 flex-shrink-0 grid place-items-center"
@@ -212,13 +213,13 @@ export default function Home() {
               <h3 className="text-[14px] font-bold text-[#0F172A] leading-tight">LAX・空港移動</h3>
               <p className="mt-1.5 text-[12px] leading-[1.65] text-[#0F172A]/65">入国、荷物受け取り、Uber・Lyft乗り場、ホテルまでの移動を日本語で。</p>
             </div>
-            {/* Photo */}
+            {/* Photo AI */}
             <div className="bg-white border border-black/8 rounded-2xl p-4 flex flex-col">
               <div className="w-9 h-9 rounded-lg bg-[#0F172A] text-[#F59E0B] grid place-items-center mb-3">
                 <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="6" width="18" height="14" rx="2"/><circle cx="12" cy="13" r="3.5"/><path d="M8 6l1.5-2h5L16 6"/></svg>
               </div>
-              <h3 className="text-[14px] font-bold text-[#0F172A] leading-tight">写真付き現地ガイド</h3>
-              <p className="mt-1.5 text-[12px] leading-[1.65] text-[#0F172A]/65">乗り場、動線、観光地の注意点を写真付きで案内。</p>
+              <h3 className="text-[14px] font-bold text-[#0F172A] leading-tight">写真をAIで即解析</h3>
+              <p className="mt-1.5 text-[12px] leading-[1.65] text-[#0F172A]/65">標識・メニュー・レシートをLINEに送るだけでAIが日本語で解説。</p>
             </div>
             {/* Safety */}
             <div className="bg-white border border-black/8 rounded-2xl p-4 flex flex-col">
@@ -226,7 +227,7 @@ export default function Home() {
                 <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-7 8-13a8 8 0 0 0-16 0c0 6 8 13 8 13z"/><circle cx="12" cy="9" r="2.5"/></svg>
               </div>
               <h3 className="text-[14px] font-bold text-[#0F172A] leading-tight">治安・エリアチェック</h3>
-              <p className="mt-1.5 text-[12px] leading-[1.65] text-[#0F172A]/65">ホテル周辺、観光地、夜歩きOKか日本語で確認。</p>
+              <p className="mt-1.5 text-[12px] leading-[1.65] text-[#0F172A]/65">位置情報を送るだけでLAPDデータをもとに安全度を日本語で評価。</p>
             </div>
             {/* Hotel */}
             <div className="bg-white border border-black/8 rounded-2xl p-4 flex flex-col">
@@ -244,22 +245,22 @@ export default function Home() {
               <h3 className="text-[14px] font-bold text-[#F59E0B] leading-tight">英語電話・予約代行</h3>
               <p className="mt-1.5 text-[12px] leading-[1.65] text-white/75">レストラン予約、空席・在庫・営業時間の確認まで代行。</p>
             </div>
+            {/* Shipping */}
+            <div className="bg-white border border-black/8 rounded-2xl p-4 flex flex-col">
+              <div className="w-9 h-9 rounded-lg bg-[#0F172A] text-[#F59E0B] grid place-items-center mb-3">
+                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/><rect x="2" y="7" width="10" height="13" rx="2"/></svg>
+              </div>
+              <h3 className="text-[14px] font-bold text-[#0F172A] leading-tight">日本への発送代行</h3>
+              <p className="mt-1.5 text-[12px] leading-[1.65] text-[#0F172A]/65">ホテルから日本へ直送。フォームに入力するだけでスタッフが手配。</p>
+            </div>
             {/* Souvenir */}
-            <div className="bg-[#F59E0B] text-[#0F172A] border border-[#F59E0B] rounded-2xl p-4 flex flex-col relative">
+            <div className="bg-[#F59E0B] text-[#0F172A] border border-[#F59E0B] rounded-2xl p-4 flex flex-col relative col-span-2">
               <span className="absolute top-3 right-3 text-[9px] font-en font-bold tracking-wider uppercase bg-[#0F172A] text-[#F59E0B] rounded-full px-2 py-0.5">Coming soon</span>
               <div className="w-9 h-9 rounded-lg bg-[#0F172A] text-[#F59E0B] grid place-items-center mb-3">
                 <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="8" width="16" height="13" rx="2"/><path d="M4 12h16"/><path d="M9 8V5a3 3 0 0 1 6 0v3"/></svg>
               </div>
               <h3 className="text-[14px] font-bold text-[#0F172A] leading-tight">お土産・ホテル受取</h3>
-              <p className="mt-1.5 text-[12px] leading-[1.65] text-[#0F172A]/75">トレジョ・職場ばらまき・人気セットを専用サイトで注文、滞在ホテル受け取り。</p>
-            </div>
-            {/* Shipping */}
-            <div className="bg-white border border-black/8 rounded-2xl p-4 flex flex-col col-span-2">
-              <div className="w-9 h-9 rounded-lg bg-[#0F172A] text-[#F59E0B] grid place-items-center mb-3">
-                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16v-2"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" y1="22" x2="12" y2="12"/><polyline points="21 14 17 16 13 14"/><line x1="17" y1="16" x2="17" y2="22"/></svg>
-              </div>
-              <h3 className="text-[14px] font-bold text-[#0F172A] leading-tight">日本への発送代行</h3>
-              <p className="mt-1.5 text-[12px] leading-[1.65] text-[#0F172A]/65">買いすぎてスーツケースに入らない荷物はお任せを。ホテルから日本へ直送します。フォームに入力するだけでスタッフが手配。</p>
+              <p className="mt-1.5 text-[12px] leading-[1.65] text-[#0F172A]/75">トレジョ・職場ばらまき・人気セットを専用サイトで注文、滞在ホテルで受け取り。</p>
             </div>
           </div>
         </div>
@@ -294,7 +295,8 @@ export default function Home() {
                 )
               },
               { step: "3", label: "Step 03", title: "予約代行はLINEで依頼", desc: "レストラン予約、空席確認、営業時間確認など、英語電話が必要な場面を代行します。内容を日本語で送るだけ。", extra: null },
-              { step: "4", label: "Step 04", title: "お土産セットは専用サイトで注文", desc: "トレジョ人気セット、職場ばらまきセットなどを選んで注文。注文後、滞在ホテルでの受け取り方法をご案内します。", extra: null },
+              { step: "4", label: "Step 04", title: "発送代行はフォームに入力するだけ", desc: "荷物が増えたらLINEのメニューから発送フォームを開いて送り先・サイズを入力。スタッフが集荷から発送まで手配します。", extra: null },
+              { step: "5", label: "Step 05", title: "お土産セットは専用サイトで注文", desc: "トレジョ人気セット、職場ばらまきセットなどを選んで注文。注文後、滞在ホテルでの受け取り方法をご案内します。", extra: null },
             ].map((s) => (
               <li key={s.step} className="relative">
                 <span className="absolute -left-8 top-1 w-[22px] h-[22px] rounded-full bg-[#F59E0B] grid place-items-center font-en font-bold text-[11px] text-[#0F172A]">{s.step}</span>
@@ -504,7 +506,7 @@ export default function Home() {
                 <h3 className="text-[15px] font-bold">旅行前にできること</h3>
               </div>
               <ul className="flex flex-col gap-2 text-[13px] leading-[1.7] text-white/70">
-                {["ホテルエリア相談", "LAX到着後の移動確認", "Uber・Lyftの乗り方確認", "レストラン予約相談", "お土産セットの事前確認", "eSIM・持ち物チェック", "治安が気になるエリアの確認"].map((t) => (
+                {["ホテルエリア相談", "LAX到着後の移動確認", "Uber・Lyftの乗り方確認", "レストラン予約相談", "お土産セットの事前確認", "帰りの荷物の発送手配", "eSIM・持ち物チェック", "治安が気になるエリアの確認"].map((t) => (
                   <li key={t} className="flex gap-2"><span className="text-[#F59E0B]">·</span>{t}</li>
                 ))}
               </ul>
@@ -517,7 +519,7 @@ export default function Home() {
                 <h3 className="text-[15px] font-bold">旅行中にできること</h3>
               </div>
               <ul className="flex flex-col gap-2 text-[13px] leading-[1.7] text-white/70">
-                {["英語電話代行", "レストラン予約", "空席・在庫確認", "LAX・ホテル・観光地の移動相談", "治安チェック", "お土産セットのホテル受け取り", "荷物の日本への発送代行", "忘れ物問い合わせ", "急な予定変更の相談"].map((t) => (
+                {["英語電話代行", "レストラン予約", "空席・在庫確認", "LAX・ホテル・観光地の移動相談", "治安チェック", "写真をAIで即解析", "荷物の日本への発送代行", "お土産セットのホテル受け取り", "忘れ物問い合わせ", "急な予定変更の相談"].map((t) => (
                   <li key={t} className="flex gap-2"><span className="text-[#F59E0B]">·</span>{t}</li>
                 ))}
               </ul>
