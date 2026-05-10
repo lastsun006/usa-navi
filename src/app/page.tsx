@@ -253,6 +253,14 @@ export default function Home() {
               <h3 className="text-[14px] font-bold text-[#0F172A] leading-tight">お土産・ホテル受取</h3>
               <p className="mt-1.5 text-[12px] leading-[1.65] text-[#0F172A]/75">トレジョ・職場ばらまき・人気セットを専用サイトで注文、滞在ホテル受け取り。</p>
             </div>
+            {/* Shipping */}
+            <div className="bg-white border border-black/8 rounded-2xl p-4 flex flex-col col-span-2">
+              <div className="w-9 h-9 rounded-lg bg-[#0F172A] text-[#F59E0B] grid place-items-center mb-3">
+                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16v-2"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" y1="22" x2="12" y2="12"/><polyline points="21 14 17 16 13 14"/><line x1="17" y1="16" x2="17" y2="22"/></svg>
+              </div>
+              <h3 className="text-[14px] font-bold text-[#0F172A] leading-tight">日本への発送代行</h3>
+              <p className="mt-1.5 text-[12px] leading-[1.65] text-[#0F172A]/65">買いすぎてスーツケースに入らない荷物はお任せを。ホテルから日本へ直送します。フォームに入力するだけでスタッフが手配。</p>
+            </div>
           </div>
         </div>
       </section>
@@ -509,7 +517,7 @@ export default function Home() {
                 <h3 className="text-[15px] font-bold">旅行中にできること</h3>
               </div>
               <ul className="flex flex-col gap-2 text-[13px] leading-[1.7] text-white/70">
-                {["英語電話代行", "レストラン予約", "空席・在庫確認", "LAX・ホテル・観光地の移動相談", "治安チェック", "お土産セットのホテル受け取り", "忘れ物問い合わせ", "急な予定変更の相談"].map((t) => (
+                {["英語電話代行", "レストラン予約", "空席・在庫確認", "LAX・ホテル・観光地の移動相談", "治安チェック", "お土産セットのホテル受け取り", "荷物の日本への発送代行", "忘れ物問い合わせ", "急な予定変更の相談"].map((t) => (
                   <li key={t} className="flex gap-2"><span className="text-[#F59E0B]">·</span>{t}</li>
                 ))}
               </ul>
@@ -550,6 +558,13 @@ export default function Home() {
                 <div className="font-en font-bold text-[#0F172A] text-[13px]">実費・手数料</div>
               </div>
               <p className="text-[12.5px] leading-[1.7] text-[#0F172A]/60">用途別のお土産セットを専用サイトで注文し、滞在ホテルで受け取れます。</p>
+            </div>
+            <div className="rounded-2xl border border-black/8 p-5">
+              <div className="flex items-baseline justify-between gap-3 mb-2">
+                <h3 className="text-[16px] font-bold text-[#0F172A]">日本への発送代行</h3>
+                <div className="font-en font-bold text-[#0F172A] text-[13px]">実費・手数料</div>
+              </div>
+              <p className="text-[12.5px] leading-[1.7] text-[#0F172A]/60">ホテルから日本へ直送。フォームに送り先・荷物情報を入力するだけで手配します。</p>
             </div>
           </div>
 
