@@ -128,12 +128,19 @@ async function handleOnboarding(replyToken: string, user: UserProfile, message: 
         ],
       },
     }]);
-    return;
+    return true;
   }
 
   // Step 1: 年齢を受け取る → 目的を聞く
   if (step === 1) {
-    const ageGroup = message.startsWith("__age_") ? message.replace("__age_", "") : null;
+    // クイックリプライ以外（普通の質問など）が来たらオンボーディングをスキップして通常応答へ
+    if (!message.startsWith("__age_")) {
+      try {
+        await updateUser(user.line_user_id, { onboarding_done: true, onboarding_step: 5 });
+      } catch (_) { /* ignore */ }
+      return false; // 通常の会話処理に回す
+    }
+    const ageGroup = message.replace("__age_", "");
     // replyを先に送ってからSupabase更新（クラッシュしても返信は届く）
     await replyToLine(replyToken, [{
       type: "text",
@@ -155,7 +162,7 @@ async function handleOnboarding(replyToken: string, user: UserProfile, message: 
         onboarding_step: 2,
       });
     } catch (_) { /* Supabase失敗しても返信済みなので続行 */ }
-    return;
+    return true;
   }
 
   // Step 2: 目的を受け取る → おすすめ情報ボタンへ
@@ -181,7 +188,7 @@ async function handleOnboarding(replyToken: string, user: UserProfile, message: 
         onboarding_step: 3,
       });
     } catch (_) { /* Supabase失敗しても返信済みなので続行 */ }
-    return;
+    return true;
   }
 
   // Step 3: おすすめ情報を表示 → 毎日受け取るか確認
@@ -217,7 +224,7 @@ async function handleOnboarding(replyToken: string, user: UserProfile, message: 
           { label: "❌ いらない",     text: "__notify_none" },
         ]
       );
-      return;
+      return true;
     }
 
     // スキップ → オンボーディング完了
@@ -231,7 +238,7 @@ async function handleOnboarding(replyToken: string, user: UserProfile, message: 
         type: "text",
         text: "了解です！いつでもメニューの「おすすめ情報」から変更できます👍\n\n何でも日本語で聞いてください😊",
       }]);
-      return;
+      return true;
     }
   }
 
@@ -252,7 +259,7 @@ async function handleOnboarding(replyToken: string, user: UserProfile, message: 
         ? "毎日おすすめ情報をお届けします✅\n不要になったらいつでも「配信停止」と送ってください。\n\n何でも日本語で聞いてください😊"
         : "了解です！いつでもメニューの「おすすめ情報」から変更できます👍\n\n何でも日本語で聞いてください😊",
     }]);
-    return;
+    return true;
   }
 }
 
@@ -1019,8 +1026,8 @@ export async function POST(request: NextRequest) {
 
     // オンボーディング中
     if (user && !user.onboarding_done) {
-      await handleOnboarding(replyToken, user, userMessage);
-      continue;
+      const handled = await handleOnboarding(replyToken, user, userMessage);
+      if (handled !== false) continue; // falseが返ったら通常の会話処理へ流す
     }
 
     // ──────────────────────────────────────
