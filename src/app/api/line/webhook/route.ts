@@ -134,10 +134,7 @@ async function handleOnboarding(replyToken: string, user: UserProfile, message: 
   // Step 1: 年齢を受け取る → 目的を聞く
   if (step === 1) {
     const ageGroup = message.startsWith("__age_") ? message.replace("__age_", "") : null;
-    await updateUser(user.line_user_id, {
-      age_group: ageGroup === "skip" ? null : ageGroup,
-      onboarding_step: 2,
-    });
+    // replyを先に送ってからSupabase更新（クラッシュしても返信は届く）
     await replyToLine(replyToken, [{
       type: "text",
       text: "ありがとうございます！\n次に、旅の目的を教えてください👇",
@@ -152,6 +149,12 @@ async function handleOnboarding(replyToken: string, user: UserProfile, message: 
         ],
       },
     }]);
+    try {
+      await updateUser(user.line_user_id, {
+        age_group: ageGroup === "skip" ? null : ageGroup,
+        onboarding_step: 2,
+      });
+    } catch (_) { /* Supabase失敗しても返信済みなので続行 */ }
     return;
   }
 
@@ -159,10 +162,6 @@ async function handleOnboarding(replyToken: string, user: UserProfile, message: 
   if (step === 2) {
     const purpose = message.startsWith("__purpose_") ? message.replace("__purpose_", "") : null;
     const purposeLabel = purpose && purpose !== "skip" ? purpose : "旅行";
-    await updateUser(user.line_user_id, {
-      travel_purpose: purpose === "skip" ? null : purpose,
-      onboarding_step: 3,
-    });
     await replyToLine(replyToken, [
       { type: "text", text: `ありがとうございます！${purposeLabel}を思いっきり楽しめるようサポートします🎉` },
       {
@@ -176,6 +175,12 @@ async function handleOnboarding(replyToken: string, user: UserProfile, message: 
         },
       },
     ]);
+    try {
+      await updateUser(user.line_user_id, {
+        travel_purpose: purpose === "skip" ? null : purpose,
+        onboarding_step: 3,
+      });
+    } catch (_) { /* Supabase失敗しても返信済みなので続行 */ }
     return;
   }
 
