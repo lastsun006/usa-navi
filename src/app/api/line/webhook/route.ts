@@ -2134,40 +2134,44 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      // Ticketmasterで直近イベントを並列検索
-      const [dodgersEvt, lakersEvt, musicEvt] = await Promise.all([
-        searchEvents("Dodgers",  { daysAhead: 7, size: 2 }),
-        searchEvents("Lakers",   { daysAhead: 7, size: 2 }),
-        searchEvents("concert",  { daysAhead: 7, size: 3, classificationName: "music" }),
-      ]);
-      const allEvents = [...dodgersEvt, ...lakersEvt, ...musicEvt];
-      const eventsText = allEvents.length > 0 ? formatEventsForClaude(allEvents) : "";
-
-      // Claudeで今日のおすすめ情報を生成
+      // web検索でLA今週のイベント・試合情報をリアルタイム取得
       const AnthropicRec = (await import("@anthropic-ai/sdk")).default;
       const anthropicRec = new AnthropicRec({ apiKey: process.env.ANTHROPIC_API_KEY });
       const purpose = user.travel_purpose ?? "観光";
-      const rec = await anthropicRec.messages.create({
+      const today = new Date().toLocaleDateString("ja-JP", { timeZone: "America/Los_Angeles", year: "numeric", month: "long", day: "numeric" });
+      const prompt = `今日は${today}（ロサンゼルス時間）です。\n\n南カリフォルニア旅行中の日本人（目的：${purpose}）向けに、今日・今週のLA最新おすすめ情報を3つ紹介してください。\n\nドジャースの試合スケジュール、レイカーズの試合、大型コンサート・イベント、観光スポット・グルメなど、web検索で最新情報を確認してから案内してください。\n\n絵文字で読みやすく、各項目2〜3行で。`;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let recMessages: any[] = [{ role: "user", content: prompt }];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let recRes: any = await anthropicRec.messages.create({
         model: "claude-haiku-4-5",
-        max_tokens: 600,
-        messages: [{
-          role: "user",
-          content: [
-            `南カリフォルニア旅行中の日本人（目的：${purpose}）向けに、今日・今週のおすすめ情報を3つ紹介してください。`,
-            "",
-            eventsText
-              ? `【直近イベント情報（Ticketmaster取得済み）】\n${eventsText}\n\n上記のイベントを優先的に案内してください。`
-              : "【注意】イベントデータが取得できていません。試合の対戦カードや具体的な公演名は絶対に作り上げないでください。",
-            "",
-            eventsText
-              ? "イベント情報に加えて、観光スポット・グルメ・季節情報なども含めてください。"
-              : "代わりにLA観光スポット・グルメ・お得情報・季節の見どころなど確実な情報を3つ案内してください。",
-            "",
-            "絵文字で読みやすく、各項目2〜3行で。",
-          ].join("\n"),
-        }],
+        max_tokens: 800,
+        tools: [{ type: "web_search_20250305", name: "web_search" }],
+        messages: recMessages,
       });
-      const todayInfo = rec.content[0].type === "text" ? rec.content[0].text.trim() : "今日もSoCalを楽しんでください！";
+
+      let todayInfo = "今日もSoCalを楽しんでください！";
+      for (let i = 0; i < 3; i++) {
+        if (recRes.stop_reason !== "tool_use") {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const textBlock = recRes.content.find((b: any) => b.type === "text");
+          if (textBlock) todayInfo = textBlock.text.trim();
+          break;
+        }
+        recMessages.push({ role: "assistant", content: recRes.content });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const toolResults = recRes.content.filter((b: any) => b.type === "tool_use").map((b: any) => ({
+          type: "tool_result", tool_use_id: b.id, content: "",  // web_searchはAnthropicが内部処理
+        }));
+        recMessages.push({ role: "user", content: toolResults });
+        recRes = await anthropicRec.messages.create({
+          model: "claude-haiku-4-5",
+          max_tokens: 800,
+          tools: [{ type: "web_search_20250305", name: "web_search" }],
+          messages: recMessages,
+        });
+      }
 
       const isOn = user.notify_recommend ?? false;
 
