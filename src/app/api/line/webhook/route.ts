@@ -2152,7 +2152,19 @@ export async function POST(request: NextRequest) {
         max_tokens: 600,
         messages: [{
           role: "user",
-          content: `南カリフォルニア旅行中の日本人（目的：${purpose}）向けに、今日・今週のおすすめ情報を3つ紹介してください。\n${eventsText ? `\n【直近イベント情報】\n${eventsText}\n\n上記を優先的に含めて` : ""}ドジャース・レイカーズ・大型コンサート・観光・グルメなど。絵文字で読みやすく、各項目2〜3行で。`,
+          content: [
+            `南カリフォルニア旅行中の日本人（目的：${purpose}）向けに、今日・今週のおすすめ情報を3つ紹介してください。`,
+            "",
+            eventsText
+              ? `【直近イベント情報（Ticketmaster取得済み）】\n${eventsText}\n\n上記のイベントを優先的に案内してください。`
+              : "【注意】イベントデータが取得できていません。試合の対戦カードや具体的な公演名は絶対に作り上げないでください。",
+            "",
+            eventsText
+              ? "イベント情報に加えて、観光スポット・グルメ・季節情報なども含めてください。"
+              : "代わりにLA観光スポット・グルメ・お得情報・季節の見どころなど確実な情報を3つ案内してください。",
+            "",
+            "絵文字で読みやすく、各項目2〜3行で。",
+          ].join("\n"),
         }],
       });
       const todayInfo = rec.content[0].type === "text" ? rec.content[0].text.trim() : "今日もSoCalを楽しんでください！";
