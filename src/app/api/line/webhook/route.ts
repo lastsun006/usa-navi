@@ -2217,38 +2217,45 @@ ${productData}
       const purpose = user.travel_purpose ?? "観光";
       const today = new Date().toLocaleDateString("ja-JP", { timeZone: "America/Los_Angeles", year: "numeric", month: "long", day: "numeric" });
 
-      // web検索なしでClaude sonnetに直接生成させる（web_searchのloop問題を回避）
+      // web検索で今週のLA試合・イベント情報をリアルタイム取得
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const recRes: any = await anthropicRec.messages.create({
-        model: "claude-sonnet-4-5",
-        max_tokens: 1000,
-        messages: [{
-          role: "user",
-          content: `今日は${today}（ロサンゼルス時間）です。
-
-南カリフォルニア旅行中の日本人（旅の目的：${purpose}）向けに、今週のLA最新情報を以下のフォーマットで日本語でまとめてください。
+      const recTools: any[] = [{ type: "web_search_20250305", name: "web_search", max_uses: 3 }];
+      const recSystemPrompt = `あなたはLA・南カリフォルニア旅行中の日本人向けのコンシェルジュです。今日は${today}（ロサンゼルス時間）です。web検索で最新情報を調べて日本語で答えてください。`;
+      const recUserPrompt = `今週のLA情報を以下のフォーマットで教えてください。web検索で「Dodgers schedule this week」「Lakers schedule this week」「LA concerts events this week」を調べてから答えてください。
 
 ⚾ ドジャース今週の試合
-・（日時・対戦相手・開始時間を知っている分だけ書く）
-・チケット: https://www.mlb.com/dodgers/tickets
+・日時・対戦相手・開始時間
 
 🏀 レイカーズ今週の試合
-・（日時・対戦相手・開始時間を知っている分だけ書く）
-・チケット: https://www.nba.com/lakers/tickets
+・日時・対戦相手・開始時間
 
-🎵 LA今週の注目イベント・コンサート
-・（知っているイベントを書く）
+🎵 今週の注目イベント・コンサート
+・イベント名・日時・会場
 
-💡 今週のおすすめ
-・（旅行者向けのLA今週のおすすめ情報1〜2個）
-
-※知らない情報は「要確認」と書いてください。絶対に日程や対戦相手を作り上げないこと。`
-        }],
-      });
+試合やイベントがない場合は「今週なし」と書いてください。`;
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const textBlock = recRes.content.find((b: any) => b.type === "text");
-      const todayInfo = textBlock ? textBlock.text.trim() : "今日もSoCalを楽しんでください！";
+      let recMsgs: any[] = [{ role: "user", content: recUserPrompt }];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let recRes: any = await anthropicRec.messages.create({ model: "claude-sonnet-4-5", max_tokens: 1024, tools: recTools, system: recSystemPrompt, messages: recMsgs });
+
+      let recLoop = 0;
+      while (recRes.stop_reason === "tool_use" && recLoop < 4) {
+        recLoop++;
+        recMsgs.push({ role: "assistant", content: recRes.content });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const toolResults = recRes.content.filter((b: any) => b.type === "tool_use").map((b: any) => ({
+          type: "tool_result", tool_use_id: b.id, content: "", // web_searchはAnthropicが内部処理
+        }));
+        recMsgs.push({ role: "user", content: toolResults });
+        recRes = await anthropicRec.messages.create({ model: "claude-sonnet-4-5", max_tokens: 1024, tools: recTools, system: recSystemPrompt, messages: recMsgs });
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const finalText = recRes.content.find((b: any) => b.type === "text" && recRes.stop_reason === "end_turn");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const anyText = recRes.content.find((b: any) => b.type === "text");
+      const todayInfo = (finalText || anyText)?.text?.trim() || "今日もSoCalを楽しんでください！";
 
       const isOn = user.notify_recommend ?? false;
 
