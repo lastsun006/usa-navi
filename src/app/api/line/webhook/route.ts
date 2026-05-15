@@ -982,6 +982,8 @@ export async function POST(request: NextRequest) {
           const results = await readBarcodes(blob, {
             formats: ["EAN13", "EAN8", "UPCA", "UPCE", "Code128", "Code39", "DataMatrix", "QRCode"],
             tryHarder: true,
+            tryRotate: true,
+            tryInvert: true,
           });
           const hit = results.find(r => r.isValid && /^\d{6,14}$/.test(r.text));
           barcode = hit?.text ?? null;
