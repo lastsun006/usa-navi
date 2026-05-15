@@ -2217,54 +2217,37 @@ ${productData}
       const purpose = user.travel_purpose ?? "観光";
       const today = new Date().toLocaleDateString("ja-JP", { timeZone: "America/Los_Angeles", year: "numeric", month: "long", day: "numeric" });
 
+      // web検索なしでClaude sonnetに直接生成させる（web_searchのloop問題を回避）
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const recTools: any[] = [{ type: "web_search_20250305", name: "web_search" }];
+      const recRes: any = await anthropicRec.messages.create({
+        model: "claude-sonnet-4-5",
+        max_tokens: 1000,
+        messages: [{
+          role: "user",
+          content: `今日は${today}（ロサンゼルス時間）です。
+
+南カリフォルニア旅行中の日本人（旅の目的：${purpose}）向けに、今週のLA最新情報を以下のフォーマットで日本語でまとめてください。
+
+⚾ ドジャース今週の試合
+・（日時・対戦相手・開始時間を知っている分だけ書く）
+・チケット: https://www.mlb.com/dodgers/tickets
+
+🏀 レイカーズ今週の試合
+・（日時・対戦相手・開始時間を知っている分だけ書く）
+・チケット: https://www.nba.com/lakers/tickets
+
+🎵 LA今週の注目イベント・コンサート
+・（知っているイベントを書く）
+
+💡 今週のおすすめ
+・（旅行者向けのLA今週のおすすめ情報1〜2個）
+
+※知らない情報は「要確認」と書いてください。絶対に日程や対戦相手を作り上げないこと。`
+        }],
+      });
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let recMsgs: any[] = [{ role: "user", content: `今日は${today}（ロサンゼルス時間）です。
-
-以下の情報をweb検索で調べて、南カリフォルニア旅行中の日本人（旅の目的：${purpose}）向けに日本語でまとめてください。
-
-【必ず検索して調べること】
-1. 「LA Dodgers schedule ${new Date().toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", month: "short", year: "numeric" })}」→ 今週のドジャース試合日程・対戦相手・球場・開始時間
-2. 「LA Lakers schedule ${new Date().toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", month: "short", year: "numeric" })}」→ 今週のレイカーズ試合日程・対戦相手・会場・開始時間
-3. 「LA concerts events this week ${new Date().toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric", year: "numeric" })}」→ 今週の大型コンサート・フェス・イベント
-
-【出力フォーマット】
-各項目を以下の形式で：
-
-⚾ ドジャース
-・日時：（月/日 時刻）
-・対戦：（対戦相手）
-・会場：Dodger Stadium
-・チケット：（入手方法）
-
-🏀 レイカーズ
-・日時：（月/日 時刻）または「今週なし」
-・対戦：（対戦相手）
-・会場：Crypto.com Arena
-・チケット：（入手方法）
-
-🎵 イベント・コンサート
-・（イベント名）：（日時・会場・概要）
-
-試合や大型イベントがない場合は正直に「今週なし」と書いてください。絶対に情報を作り上げないこと。` }];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let recRes: any = await anthropicRec.messages.create({ model: "claude-sonnet-4-5", max_tokens: 800, tools: recTools, messages: recMsgs });
-
-      // tool_use ループ（stop_reason が end_turn になるまで繰り返す）
-      let recLoop = 0;
-      while (recRes.stop_reason === "tool_use" && recLoop < 5) {
-        recLoop++;
-        recMsgs.push({ role: "assistant", content: recRes.content });
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const toolResults = recRes.content.filter((b: any) => b.type === "tool_use").map((b: any) => ({ type: "tool_result", tool_use_id: b.id, content: "" }));
-        recMsgs.push({ role: "user", content: toolResults });
-        recRes = await anthropicRec.messages.create({ model: "claude-sonnet-4-5", max_tokens: 1200, tools: recTools, messages: recMsgs });
-      }
-
-      // stop_reason === "end_turn" の最終テキストのみ使う（途中経過は無視）
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const textBlock = recRes.stop_reason === "end_turn" ? recRes.content.find((b: any) => b.type === "text") : null;
+      const textBlock = recRes.content.find((b: any) => b.type === "text");
       const todayInfo = textBlock ? textBlock.text.trim() : "今日もSoCalを楽しんでください！";
 
       const isOn = user.notify_recommend ?? false;
