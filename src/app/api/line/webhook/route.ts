@@ -750,6 +750,8 @@ export async function POST(request: NextRequest) {
             "",
             "移動・治安・ホテル・食事・チップ・トイレ・写真チェックなど、現地で困った時にそのまま聞いてください。",
             "",
+            "📸 スーパーの商品やバーコードを写真で送ると、商品名・原材料・値段の目安・おすすめ度を日本語でお知らせします。",
+            "",
             "また、必要に応じて",
             "予約代行・お土産の購入代行・日本への発送代行・スタッフ相談もご利用いただけます🎁",
             "",
@@ -1007,6 +1009,20 @@ export async function POST(request: NextRequest) {
               }
             }
           } catch { /* タイムアウト等は無視してVisionにフォールバック */ }
+        }
+
+        // バーコードあり・DBヒットなしの場合 → パッケージ写真を促す
+        if (barcode && !productData) {
+          await replyToLine(replyToken, [{
+            type: "text",
+            text: "バーコードを読み取れませんでした。商品名が見えるようにパッケージ正面の写真を送ってもらえますか？📦",
+            quickReply: {
+              items: [
+                { type: "action", action: { type: "message", label: "📸 別の写真を送る", text: "写真を送る" } },
+              ],
+            },
+          }]);
+          continue;
         }
 
         // Step 3: Claude で日本語解説を生成
