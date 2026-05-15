@@ -954,7 +954,7 @@ export async function POST(request: NextRequest) {
       continue;
     }
 
-    // 🖼️ 画像メッセージ → Vision分析
+    // 🖼️ 画像メッセージ → Vision分析 / 商品スキャン
     if (event.message.type === "image") {
       const messageId = event.message.id;
       try {
@@ -965,11 +965,90 @@ export async function POST(request: NextRequest) {
         if (!imgRes.ok) throw new Error(`画像取得失敗: ${imgRes.status}`);
         const imgBuffer = await imgRes.arrayBuffer();
         const base64 = Buffer.from(imgBuffer).toString("base64");
-        const mimeType = imgRes.headers.get("content-type") || "image/jpeg";
+        const mimeType = (imgRes.headers.get("content-type") || "image/jpeg") as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
 
-        // Claude Vision で分析
         const Anthropic = (await import("@anthropic-ai/sdk")).default;
         const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+        const imgSource = { type: "base64" as const, media_type: mimeType, data: base64 };
+
+        // Step 1: バーコード検出（Haiku で高速抽出）
+        const barcodeRes = await anthropic.messages.create({
+          model: "claude-haiku-4-5",
+          max_tokens: 50,
+          messages: [{
+            role: "user",
+            content: [
+              { type: "image", source: imgSource },
+              { type: "text", text: "この画像にバーコード（UPC/EAN）がありますか？ある場合は数字のみ返してください。ない場合は「なし」とだけ返してください。" },
+            ],
+          }],
+        });
+        const barcodeRaw = barcodeRes.content[0].type === "text" ? barcodeRes.content[0].text.trim().replace(/\s/g, "") : "なし";
+        const barcode = /^\d{8,14}$/.test(barcodeRaw) ? barcodeRaw : null;
+
+        // Step 2: バーコードがあれば Open Food Facts で商品情報を取得
+        let productData = "";
+        if (barcode) {
+          try {
+            const offRes = await fetch(`https://world.openfoodfacts.org/api/v2/product/${barcode}.json`, { signal: AbortSignal.timeout(4000) });
+            if (offRes.ok) {
+              const off = await offRes.json();
+              if (off.status === 1) {
+                const p = off.product;
+                productData = JSON.stringify({
+                  name: p.product_name || p.product_name_en,
+                  brand: p.brands,
+                  quantity: p.quantity,
+                  ingredients: p.ingredients_text_en || p.ingredients_text,
+                  allergens: p.allergens_tags?.join(", "),
+                  categories: p.categories,
+                  nutriscore: p.nutriscore_grade,
+                });
+              }
+            }
+          } catch { /* タイムアウト等は無視してVisionにフォールバック */ }
+        }
+
+        // Step 3: Claude で日本語解説を生成
+        let prompt = "";
+        if (productData) {
+          // バーコードDB成功 → 正確な商品データを使って解説
+          prompt = `アメリカのスーパーで見つけた商品です。以下のデータを元に日本人旅行者向けに日本語で説明してください。
+
+【商品データ】
+${productData}
+
+以下を含めて400文字以内で絵文字付きで：
+1. 🏷️ 商品名（英語＋日本語訳）
+2. 📦 どんな商品か
+3. 🥗 主な原材料（日本語）
+4. ⚠️ アレルギー情報
+5. 🍽️ 食べ方・使い方
+6. 💰 アメリカのスーパーでの平均価格の目安
+7. ⭐ おすすめ度（★1〜5）とひとこと`;
+        } else {
+          // バーコードなし or DB未ヒット → Vision で商品・その他全般を判断
+          prompt = `あなたはアメリカ（南カリフォルニア）を旅行中の日本人をサポートするAIアシスタントです。
+送られてきた画像を見て、内容に応じて日本語で答えてください。
+
+【商品・食品の場合】（最優先）
+1. 🏷️ 商品名（英語＋日本語）
+2. 📦 どんな商品か
+3. 🥗 主な原材料
+4. ⚠️ アレルギー情報
+5. 🍽️ 食べ方・使い方
+6. 💰 アメリカのスーパーでの平均価格の目安
+7. ⭐ おすすめ度（★1〜5）
+
+【その他の場合】
+- 標識・看板 → 意味・注意事項
+- レシート → チップ確認・金額の妥当性
+- メニュー → おすすめ・アレルギー注意
+- 英語テキスト → 日本語訳
+- 街並み → 雰囲気・安全性
+
+400文字以内で絵文字を使って読みやすく。`;
+        }
 
         const visionRes = await anthropic.messages.create({
           model: "claude-opus-4-5",
@@ -977,26 +1056,8 @@ export async function POST(request: NextRequest) {
           messages: [{
             role: "user",
             content: [
-              {
-                type: "image",
-                source: { type: "base64", media_type: mimeType as "image/jpeg" | "image/png" | "image/gif" | "image/webp", data: base64 },
-              },
-              {
-                type: "text",
-                text: `あなたはアメリカ（南カリフォルニア）を旅行中の日本人をサポートするAIアシスタントです。
-送られてきた画像を見て、以下の観点から日本語で丁寧に答えてください。
-
-画像の内容によって適切に判断：
-- 標識・看板 → 意味を説明し、駐車OKかNGか、注意事項を教える
-- レシート・請求書 → チップが含まれているか確認し、相場かどうか判断する
-- 食品・商品 → 日本に持ち帰れるか（税関・検疫のルール）を教える
-- メニュー → おすすめ料理や注意点（アレルギー等）を教える
-- 英語テキスト → 日本語に翻訳して意味を説明する
-- 街並み・エリア → 雰囲気・安全性について教える
-- その他 → 旅行者に役立つ情報を提供する
-
-回答は300文字以内で簡潔に、絵文字を使って読みやすくしてください。`,
-              },
+              { type: "image", source: imgSource },
+              { type: "text", text: prompt },
             ],
           }],
         });
