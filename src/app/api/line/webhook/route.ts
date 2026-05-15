@@ -1585,6 +1585,60 @@ ${productData}
       continue;
     }
 
+    // 「何ができる？」「使い方」「機能」→ 全機能ガイドを表示
+    if (/何ができ|なにができ|何が出来|どんなこと(が|を)?(でき|聞け|教え)|機能|使い方|ヘルプ|help|できること|how to use/i.test(userMessage)) {
+      await replyToLine(replyToken, [
+        {
+          type: "text",
+          text: [
+            "🌴 LA&SoCal コンシェルジュ できること一覧",
+            "",
+            "【📸 写真・画像を送るだけ】",
+            "・バーコード or 商品写真 → 商品名・原材料・値段を日本語で解説",
+            "・看板・メニュー・レシート → 日本語訳＋アドバイス",
+            "・現在地の位置情報 → 周辺の治安をLAPDデータで評価",
+            "",
+            "【🗺️ 現地情報】",
+            "・移動・行き方（LAX・Uber・レンタカーなど）",
+            "・ホテル選び・エリア別アドバイス",
+            "・食事・チップの相場",
+            "・人気スポット（ディズニー・ドジャース・ユニバーサルなど）",
+            "・お土産おすすめ",
+            "・トイレの場所（現在地から検索）",
+            "・近くのレストラン検索（現在地から）",
+            "",
+            "【⚾ リアルタイム情報】",
+            "・ドジャース＆レイカーズ 今週の試合スケジュール",
+            "・チケット・ツアー案内",
+            "",
+            "【📞 代行サービス】",
+            "・レストラン予約代行（英語で電話します）",
+            "・荷物の日本発送代行",
+            "",
+            "【💬 なんでも日本語で】",
+            "自由に質問してOKです！",
+            "「○○ってどう言うの？」「これ食べても大丈夫？」",
+            "「迷子になった」「具合が悪い」なんでも聞いてください。",
+          ].join("\n"),
+        },
+        {
+          type: "text",
+          text: "何か試してみますか？",
+          quickReply: {
+            items: [
+              { type: "action", action: { type: "message", label: "📸 商品をスキャン",     text: "写真を送る" } },
+              { type: "action", action: { type: "message", label: "⚾ 今週の試合",         text: "試合・お得情報" } },
+              { type: "action", action: { type: "message", label: "🔒 治安チェック",       text: "__resend_location_safety" } },
+              { type: "action", action: { type: "message", label: "📞 レストラン予約",     text: "予約代行" } },
+              { type: "action", action: { type: "message", label: "📦 荷物を日本に送る",  text: "__omiyage_shipping" } },
+              { type: "action", action: { type: "message", label: "🚗 LAXからの行き方",   text: "LAXから市内への行き方を教えて" } },
+            ],
+          },
+        },
+      ]);
+      continue;
+    }
+
     // 「食事・チップ」ボタン → チップ情報 + 近くのレストラン案内
     if (userMessage === "食事・チップ") {
       if (user) await updateUser(user.line_user_id, { pending_action: null });
