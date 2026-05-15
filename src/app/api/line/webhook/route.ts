@@ -9,6 +9,7 @@ import { createPaymentLink } from "@/lib/square-payment";
 import { scheduleCronJobAt, deleteCronJob } from "@/lib/cron-scheduler";
 import { searchPlaces, formatPlacesForClaude, searchNearbyRestaurants } from "@/lib/google-places";
 import { searchEvents, formatEventsForClaude } from "@/lib/ticketmaster";
+import { getDodgersSchedule, getLakersSchedule, formatGamesForLine } from "@/lib/sports";
 
 export const maxDuration = 60;
 
@@ -1918,6 +1919,13 @@ ${productData}
       }]);
       continue;
     }
+    if (userMessage === "__lakers_ticket") {
+      await replyToLine(replyToken, [{
+        type: "text",
+        text: "🎟️ レイカーズ チケット\n\n公式サイト：https://www.nba.com/lakers/tickets\n\n💡 プレーオフシーズンはすぐ完売！NBAアプリやTicketmasterでも購入できます。",
+      }]);
+      continue;
+    }
     if (userMessage === "__dodgers_access") {
       await replyToLine(replyToken, [{
         type: "text",
@@ -2199,13 +2207,39 @@ ${productData}
       continue;
     }
 
-    // 「試合・お得情報」ボタン → おすすめ情報と同じ処理
+    // 「試合・お得情報」ボタン → MLB/NBA API で今週の試合情報を直接取得
     if (userMessage === "試合・お得情報") {
-      // おすすめ情報ハンドラーへ流す（下記で処理）
+      // LA時間で今日〜7日後の範囲
+      const nowLA = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const toDateStr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      const startDate = toDateStr(nowLA);
+      const endLA = new Date(nowLA.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const endDate = toDateStr(endLA);
+
+      const [dodgers, lakers] = await Promise.all([
+        getDodgersSchedule(startDate, endDate),
+        getLakersSchedule(startDate, endDate),
+      ]);
+
+      const gamesText = formatGamesForLine(dodgers, lakers);
+
+      await replyToLine(replyToken, [{
+        type: "text",
+        text: gamesText,
+        quickReply: {
+          items: [
+            { type: "action", action: { type: "message", label: "⚾ ドジャースチケット",  text: "__dodgers_ticket" } },
+            { type: "action", action: { type: "message", label: "🏀 レイカーズチケット",  text: "__lakers_ticket" } },
+            { type: "action", action: { type: "message", label: "🏟️ 球場への行き方",     text: "__dodgers_access" } },
+          ],
+        },
+      }]);
+      continue;
     }
 
-    // 「おすすめ情報」「試合・お得情報」ボタン → 今日のイベント検索＋Claude生成→通知設定を聞く
-    if (/おすすめ情報|試合・お得情報|通知設定|通知追加|通知を追加|通知を受け取/.test(userMessage)) {
+    // 「おすすめ情報」ボタン → Claude生成→通知設定を聞く
+    if (/おすすめ情報|通知設定|通知追加|通知を追加|通知を受け取/.test(userMessage)) {
       if (!user) {
         await replyToLine(replyToken, [{ type: "text", text: "まずは友だち登録をしてください😊" }]);
         continue;
