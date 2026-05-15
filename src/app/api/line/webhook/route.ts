@@ -974,20 +974,41 @@ export async function POST(request: NextRequest) {
         const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
         const imgSource = { type: "base64" as const, media_type: mimeType, data: base64 };
 
-        // Step 1: バーコード検出（Haiku で高速抽出）
-        const barcodeRes = await anthropic.messages.create({
-          model: "claude-haiku-4-5",
-          max_tokens: 50,
-          messages: [{
-            role: "user",
-            content: [
-              { type: "image", source: imgSource },
-              { type: "text", text: "この画像にバーコード（UPC/EAN）がありますか？ある場合は数字のみ返してください。ない場合は「なし」とだけ返してください。" },
-            ],
-          }],
-        });
-        const barcodeRaw = barcodeRes.content[0].type === "text" ? barcodeRes.content[0].text.trim().replace(/\s/g, "") : "なし";
-        const barcode = /^\d{8,14}$/.test(barcodeRaw) ? barcodeRaw : null;
+        // Step 1a: ZXing WASM でバーコード検出（専用ライブラリ・高精度）
+        let barcode: string | null = null;
+        try {
+          const { readBarcodes } = await import("zxing-wasm/reader");
+          const blob = new Blob([imgBuffer], { type: mimeType });
+          const results = await readBarcodes(blob, {
+            formats: ["EAN13", "EAN8", "UPCA", "UPCE", "Code128", "Code39", "DataMatrix", "QRCode"],
+            tryHarder: true,
+          });
+          const hit = results.find(r => r.isValid && /^\d{6,14}$/.test(r.text));
+          barcode = hit?.text ?? null;
+          if (barcode) console.log("ZXing barcode:", barcode);
+        } catch (zxErr) {
+          console.warn("ZXing failed, fallback to Claude:", zxErr);
+        }
+
+        // Step 1b: ZXing で取れなければ Claude Sonnet でフォールバック
+        if (!barcode) {
+          const barcodeRes = await anthropic.messages.create({
+            model: "claude-sonnet-4-5",
+            max_tokens: 60,
+            messages: [{
+              role: "user",
+              content: [
+                { type: "image", source: imgSource },
+                { type: "text", text: "この画像にUPC/EANバーコードがあれば、バーコード下部に印刷された数字列をそのまま返してください。数字のみ、スペースなし。バーコードがない・読めない場合は「なし」だけ返してください。" },
+              ],
+            }],
+          });
+          const raw = barcodeRes.content[0].type === "text" ? barcodeRes.content[0].text.trim().replace(/[^0-9]/g, "") : "";
+          if (/^\d{6,14}$/.test(raw)) {
+            barcode = raw;
+            console.log("Claude barcode fallback:", barcode);
+          }
+        }
 
         // Step 2: バーコードがあれば Open Food Facts で商品情報を取得
         let productData = "";
@@ -1012,19 +1033,9 @@ export async function POST(request: NextRequest) {
           } catch { /* タイムアウト等は無視してVisionにフォールバック */ }
         }
 
-        // バーコードあり・DBヒットなしの場合 → パッケージ写真を促す
-        if (barcode && !productData) {
-          await replyToLine(replyToken, [{
-            type: "text",
-            text: "バーコードを読み取れませんでした。商品名が見えるようにパッケージ正面の写真を送ってもらえますか？📦",
-            quickReply: {
-              items: [
-                { type: "action", action: { type: "message", label: "📸 別の写真を送る", text: "写真を送る" } },
-              ],
-            },
-          }]);
-          continue;
-        }
+        // バーコードあり・DBヒットなしの場合 → Vision で直接商品を解析（DBなくても答える）
+        // productDataがなくても、barcodeがあった証拠として画像にバーコードが写っているので
+        // そのままStep3のVision解析（elseブランチ）へ流す
 
         // Step 3: Claude で日本語解説を生成
         let prompt = "";
@@ -1045,17 +1056,20 @@ ${productData}
 7. ⭐ おすすめ度（★1〜5）とひとこと`;
         } else {
           // バーコードなし or DB未ヒット → Vision で商品・その他全般を判断
-          prompt = `あなたはアメリカ（南カリフォルニア）を旅行中の日本人をサポートするAIアシスタントです。
+          const barcodeHint = barcode
+            ? `バーコード番号 ${barcode} が検出されましたが、データベースにない商品です。画像から直接商品を判断してください。\n\n`
+            : "";
+          prompt = `${barcodeHint}あなたはアメリカ（南カリフォルニア）を旅行中の日本人をサポートするAIアシスタントです。
 送られてきた画像を見て、内容に応じて日本語で答えてください。
 
 【商品・食品の場合】（最優先）
 1. 🏷️ 商品名（英語＋日本語）
-2. 📦 どんな商品か
-3. 🥗 主な原材料
-4. ⚠️ アレルギー情報
+2. 📦 どんな商品か（見た目・用途・特徴）
+3. 🥗 主な原材料（ラベルから読み取れる範囲で）
+4. ⚠️ アレルギー情報（ナッツ・乳・小麦・大豆など）
 5. 🍽️ 食べ方・使い方
 6. 💰 アメリカのスーパーでの平均価格の目安
-7. ⭐ おすすめ度（★1〜5）
+7. ⭐ おすすめ度（★1〜5）とひとこと
 
 【その他の場合】
 - 標識・看板 → 意味・注意事項
