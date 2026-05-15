@@ -2251,19 +2251,20 @@ ${productData}
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let recRes: any = await anthropicRec.messages.create({ model: "claude-sonnet-4-5", max_tokens: 800, tools: recTools, messages: recMsgs });
 
-      // tool_use ループ（web_searchはAnthropicが内部処理、空のtool_resultを返せばOK）
+      // tool_use ループ（stop_reason が end_turn になるまで繰り返す）
       let recLoop = 0;
-      while (recRes.stop_reason === "tool_use" && recLoop < 3) {
+      while (recRes.stop_reason === "tool_use" && recLoop < 5) {
         recLoop++;
         recMsgs.push({ role: "assistant", content: recRes.content });
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const toolResults = recRes.content.filter((b: any) => b.type === "tool_use").map((b: any) => ({ type: "tool_result", tool_use_id: b.id, content: "" }));
         recMsgs.push({ role: "user", content: toolResults });
-        recRes = await anthropicRec.messages.create({ model: "claude-sonnet-4-5", max_tokens: 800, tools: recTools, messages: recMsgs });
+        recRes = await anthropicRec.messages.create({ model: "claude-sonnet-4-5", max_tokens: 1200, tools: recTools, messages: recMsgs });
       }
 
+      // stop_reason === "end_turn" の最終テキストのみ使う（途中経過は無視）
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const textBlock = recRes.content.find((b: any) => b.type === "text");
+      const textBlock = recRes.stop_reason === "end_turn" ? recRes.content.find((b: any) => b.type === "text") : null;
       const todayInfo = textBlock ? textBlock.text.trim() : "今日もSoCalを楽しんでください！";
 
       const isOn = user.notify_recommend ?? false;
