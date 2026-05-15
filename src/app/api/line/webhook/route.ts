@@ -1586,7 +1586,7 @@ ${productData}
     }
 
     // 「何ができる？」「使い方」「機能」→ 全機能ガイドを表示
-    if (/何ができ|なにができ|何が出来|どんなこと(が|を)?(でき|聞け|教え)|機能|使い方|ヘルプ|help|できること|how to use/i.test(userMessage)) {
+    if (/何(が|を)?(でき|でき|出来)|なに(が|を)?(でき|出来)|何してくれ|なにしてくれ|どう使|どんな(機能|こと|こと)|使い方|機能(一覧|教|は)|ヘルプ|help|できること|how to use|何に使え|役に立つ|何聞け|なに聞け/i.test(userMessage)) {
       await replyToLine(replyToken, [
         {
           type: "text",
