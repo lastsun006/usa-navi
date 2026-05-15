@@ -2220,7 +2220,34 @@ ${productData}
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const recTools: any[] = [{ type: "web_search_20250305", name: "web_search" }];
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let recMsgs: any[] = [{ role: "user", content: `今日は${today}（ロサンゼルス時間）です。\n\n南カリフォルニア旅行中の日本人（目的：${purpose}）向けに、今日・今週のLA最新おすすめ情報を3つ紹介してください。\n\nドジャースの試合スケジュール、レイカーズの試合、大型コンサート・イベント、観光スポット・グルメなど、web検索で最新情報を確認してから案内してください。\n\n絵文字で読みやすく、各項目2〜3行で。` }];
+      let recMsgs: any[] = [{ role: "user", content: `今日は${today}（ロサンゼルス時間）です。
+
+以下の情報をweb検索で調べて、南カリフォルニア旅行中の日本人（旅の目的：${purpose}）向けに日本語でまとめてください。
+
+【必ず検索して調べること】
+1. 「LA Dodgers schedule ${new Date().toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", month: "short", year: "numeric" })}」→ 今週のドジャース試合日程・対戦相手・球場・開始時間
+2. 「LA Lakers schedule ${new Date().toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", month: "short", year: "numeric" })}」→ 今週のレイカーズ試合日程・対戦相手・会場・開始時間
+3. 「LA concerts events this week ${new Date().toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric", year: "numeric" })}」→ 今週の大型コンサート・フェス・イベント
+
+【出力フォーマット】
+各項目を以下の形式で：
+
+⚾ ドジャース
+・日時：（月/日 時刻）
+・対戦：（対戦相手）
+・会場：Dodger Stadium
+・チケット：（入手方法）
+
+🏀 レイカーズ
+・日時：（月/日 時刻）または「今週なし」
+・対戦：（対戦相手）
+・会場：Crypto.com Arena
+・チケット：（入手方法）
+
+🎵 イベント・コンサート
+・（イベント名）：（日時・会場・概要）
+
+試合や大型イベントがない場合は正直に「今週なし」と書いてください。絶対に情報を作り上げないこと。` }];
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let recRes: any = await anthropicRec.messages.create({ model: "claude-sonnet-4-5", max_tokens: 800, tools: recTools, messages: recMsgs });
 
