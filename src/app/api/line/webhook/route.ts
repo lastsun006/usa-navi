@@ -2218,13 +2218,22 @@ ${productData}
       const today = new Date().toLocaleDateString("ja-JP", { timeZone: "America/Los_Angeles", year: "numeric", month: "long", day: "numeric" });
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const recRes: any = await anthropicRec.messages.create({
-        model: "claude-sonnet-4-5",
-        max_tokens: 800,
+      const recTools: any[] = [{ type: "web_search_20250305", name: "web_search" }];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let recMsgs: any[] = [{ role: "user", content: `今日は${today}（ロサンゼルス時間）です。\n\n南カリフォルニア旅行中の日本人（目的：${purpose}）向けに、今日・今週のLA最新おすすめ情報を3つ紹介してください。\n\nドジャースの試合スケジュール、レイカーズの試合、大型コンサート・イベント、観光スポット・グルメなど、web検索で最新情報を確認してから案内してください。\n\n絵文字で読みやすく、各項目2〜3行で。` }];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let recRes: any = await anthropicRec.messages.create({ model: "claude-sonnet-4-5", max_tokens: 800, tools: recTools, messages: recMsgs });
+
+      // tool_use ループ（web_searchはAnthropicが内部処理、空のtool_resultを返せばOK）
+      let recLoop = 0;
+      while (recRes.stop_reason === "tool_use" && recLoop < 3) {
+        recLoop++;
+        recMsgs.push({ role: "assistant", content: recRes.content });
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        tools: [{ type: "web_search_20250305" as any, name: "web_search" }],
-        messages: [{ role: "user", content: `今日は${today}（ロサンゼルス時間）です。\n\n南カリフォルニア旅行中の日本人（目的：${purpose}）向けに、今日・今週のLA最新おすすめ情報を3つ紹介してください。\n\nドジャースの試合スケジュール、レイカーズの試合、大型コンサート・イベント、観光スポット・グルメなど、web検索で最新情報を確認してから案内してください。\n\n絵文字で読みやすく、各項目2〜3行で。` }],
-      });
+        const toolResults = recRes.content.filter((b: any) => b.type === "tool_use").map((b: any) => ({ type: "tool_result", tool_use_id: b.id, content: "" }));
+        recMsgs.push({ role: "user", content: toolResults });
+        recRes = await anthropicRec.messages.create({ model: "claude-sonnet-4-5", max_tokens: 800, tools: recTools, messages: recMsgs });
+      }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const textBlock = recRes.content.find((b: any) => b.type === "text");
